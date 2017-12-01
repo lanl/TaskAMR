@@ -19,6 +19,7 @@ function pow(x, y)
   return value
 end
 
+-- for creating regions for levels 1 to MAX_LEVEL
 function make_level_region(n)
   local level_region = regentlib.newsymbol("level_" .. n .. "_region")
   local ratio_to_level1 = pow(2, n) / 2
@@ -47,9 +48,37 @@ function make_top_level_task()
   end
   local task top_level()
     [values];
-    [loops]
+    [loops];
+    initialize_cells([level_regions[MAX_LEVEL]])
+    print_cells([level_regions[MAX_LEVEL]])
   end
   return top_level
+end
+
+task initialize_cells(cell_region: region(ispace(int1d), CellValues))
+where
+  writes(cell_region.phi)
+do
+  var size : int64 = cell_region.ispace.bounds.hi - cell_region.ispace.bounds.lo + 1
+  for cell in cell_region.ispace do
+    if [int64](cell) < (size/2) then
+      cell_region[cell].phi = 1.0
+    else
+      cell_region[cell].phi = 0.0
+    end
+  end
+  C.printf("initialize_cells %d cells\n", size)
+end
+
+task print_cells(cell_region: region(ispace(int1d), CellValues))
+where
+  reads(cell_region.phi)
+do
+  C.printf("phi: ")
+  for cell in cell_region do
+    C.printf("%f ", cell_region[cell].phi)
+  end
+  C.printf("\n")
 end
 
 local main = make_top_level_task()
