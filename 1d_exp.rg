@@ -10,13 +10,22 @@ fspace CellValues
   phi : double
 }
 
-function make_level_region(n)
-  local level_region = regentlib.newsymbol("level_" .. n .. "_region")
-  local value = rquote var [level_region] = region(ispace(int1d, BLOCK_X * LEVEL_1_NX_BLOCKS), CellValues) end
-  return level_region, value
+-- like stdlib's
+function pow(x, y)
+  local value = x
+  for i = 2,y do
+    value = value * x
+  end
+  return value
 end
 
-
+function make_level_region(n)
+  local level_region = regentlib.newsymbol("level_" .. n .. "_region")
+  local ratio_to_level1 = pow(2, n) / 2
+  local num_cells = BLOCK_X * LEVEL_1_NX_BLOCKS * ratio_to_level1
+  local value = rquote var [level_region] = region(ispace(int1d, num_cells), CellValues) end
+  return level_region, value
+end
 
 function make_top_level_task()
   local level_regions = terralib.newlist()
@@ -29,9 +38,11 @@ function make_top_level_task()
   local loops = terralib.newlist()
   for n = 1, MAX_LEVEL do
     loops:insert(rquote
+      var total : int64 = 0
       for cell in [level_regions[n]] do
-        C.printf(["level " .. n .. " cell %d\n"], cell)
+        total = total + 1
       end
+      C.printf(["level " .. n .. " cells %d \n"], total)
     end)
   end
   local task top_level()
