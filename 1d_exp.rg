@@ -1,9 +1,9 @@
 import "regent"
 local C = regentlib.c
 
-local BLOCK_X = 4
-local LEVEL_1_NX_BLOCKS = 3
-local MAX_LEVEL = 3
+local CELLS_PER_BLOCK_X = 4
+local LEVEL_1_BLOCKS_X = 3
+local MAX_REFINEMENT_LEVEL = 3
 
 fspace CellValues
 {
@@ -19,38 +19,38 @@ function pow(x, y)
   return value
 end
 
--- for creating regions for levels 1 to MAX_LEVEL
-function make_level_region(n)
-  local level_region = regentlib.newsymbol("level_" .. n .. "_region")
+-- for creating regions for levels 1 to MAX_REFINEMENT_LEVEL
+function make_level_regions(n)
+  local level_cell = regentlib.newsymbol("level_" .. n .. "_cell")
   local ratio_to_level1 = pow(2, n) / 2
-  local num_cells = BLOCK_X * LEVEL_1_NX_BLOCKS * ratio_to_level1
-  local value = rquote var [level_region] = region(ispace(int1d, num_cells), CellValues) end
-  return level_region, value
+  local num_cells = CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * ratio_to_level1
+  local cells = rquote var [level_cell] = region(ispace(int1d, num_cells), CellValues) end
+  return level_cell, cells
 end
 
 function make_top_level_task()
-  local level_regions = terralib.newlist()
-  local values = terralib.newlist()
-  for n = 1, MAX_LEVEL do
-    local level_region, value = make_level_region(n)
-    level_regions:insert(level_region)
-    values:insert(value)
+  local level_cells = terralib.newlist()
+  local declare_level_cells = terralib.newlist()
+  for n = 1, MAX_REFINEMENT_LEVEL do
+    local level_cell, declare_cell = make_level_regions(n)
+    level_cells:insert(level_cell)
+    declare_level_cells:insert(declare_cell)
   end
   local loops = terralib.newlist()
-  for n = 1, MAX_LEVEL do
+  for n = 1, MAX_REFINEMENT_LEVEL do
     loops:insert(rquote
       var total : int64 = 0
-      for cell in [level_regions[n]] do
+      for cell in [level_cells[n]] do
         total = total + 1
       end
       C.printf(["level " .. n .. " cells %d \n"], total)
     end)
   end
   local task top_level()
-    [values];
+    [declare_level_cells];
     [loops];
-    initialize_cells([level_regions[MAX_LEVEL]])
-    print_cells([level_regions[MAX_LEVEL]])
+    initialize_cells([level_cells[MAX_REFINEMENT_LEVEL]])
+    print_cells([level_cells[MAX_REFINEMENT_LEVEL]])
   end
   return top_level
 end
