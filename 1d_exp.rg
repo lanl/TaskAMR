@@ -10,6 +10,12 @@ fspace CellValues
   phi : double
 }
 
+fspace FaceValues
+{
+  flux : double
+}
+
+
 -- like stdlib's
 function pow(x, y)
   local value = x
@@ -25,16 +31,24 @@ function make_level_regions(n)
   local ratio_to_level1 = pow(2, n) / 2
   local num_cells = CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * ratio_to_level1
   local cells = rquote var [level_cell] = region(ispace(int1d, num_cells), CellValues) end
-  return level_cell, cells
+
+  local level_face = regentlib.newsymbol("level_" .. n .. "_face")
+  local ratio_to_level1 = pow(2, n) / 2
+  local num_faces = num_cells + 1
+  local faces = rquote var [level_face] = region(ispace(int1d, num_faces), FaceValues) end
+  return level_cell, cells, level_face, faces
 end
 
 function make_top_level_task()
   local level_cells = terralib.newlist()
-  local declare_level_cells = terralib.newlist()
+  local level_faces = terralib.newlist()
+  local declare_level_regions = terralib.newlist()
   for n = 1, MAX_REFINEMENT_LEVEL do
-    local level_cell, declare_cell = make_level_regions(n)
+    local level_cell, declare_cells, level_face, declare_faces = make_level_regions(n)
     level_cells:insert(level_cell)
-    declare_level_cells:insert(declare_cell)
+    declare_level_regions:insert(declare_cells)
+    level_faces:insert(level_face)
+    declare_level_regions:insert(declare_faces)
   end
   local loops = terralib.newlist()
   for n = 1, MAX_REFINEMENT_LEVEL do
@@ -47,7 +61,7 @@ function make_top_level_task()
     end)
   end
   local task top_level()
-    [declare_level_cells];
+    [declare_level_regions];
     [loops];
     initialize_cells([level_cells[MAX_REFINEMENT_LEVEL]])
     print_cells([level_cells[MAX_REFINEMENT_LEVEL]])
