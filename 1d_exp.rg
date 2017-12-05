@@ -3,14 +3,16 @@ local C = regentlib.c
 
 -- global constants
 
-local CELLS_PER_BLOCK_X = 4
-local LEVEL_1_BLOCKS_X = 3
-local MAX_REFINEMENT_LEVEL = 3
-local NX = 48
+local CELLS_PER_BLOCK_X = 2
+local LEVEL_1_BLOCKS_X = 5
+local MAX_REFINEMENT_LEVEL = 1
+local NX = 10
+local MAX_NX = 640
 local CFL = 0.5
 local U = 1.0
-local DX = 1.0 / (NX - 1)
-local DT = CFL * DX / U
+local DX = 1.0 / NX
+local MIN_DX = 1.0 / MAX_NX
+local DT = CFL * MIN_DX / U
 
 fspace CellValues
 {
@@ -71,9 +73,16 @@ function make_top_level_task()
     [declare_level_regions];
     [loops];
     initializeCells([level_cells[MAX_REFINEMENT_LEVEL]])
-    printCells([level_cells[MAX_REFINEMENT_LEVEL]])
-    calculateFlux(U, DX, DT, [level_cells[MAX_REFINEMENT_LEVEL]],
-                  [level_faces[MAX_REFINEMENT_LEVEL]])
+    var time : double = 0.0
+    while time < 0.25 - DT do
+      calculateFlux(U, DX, DT, [level_cells[MAX_REFINEMENT_LEVEL]],
+                    [level_faces[MAX_REFINEMENT_LEVEL]])
+      applyFlux(DX, DT, [level_cells[MAX_REFINEMENT_LEVEL]],
+                    [level_faces[MAX_REFINEMENT_LEVEL]])
+      time += DT
+      C.printf("t = %f\n",time)
+    end
+    writeCells([level_cells[MAX_REFINEMENT_LEVEL]])
   end
   return top_level
 end
@@ -94,6 +103,21 @@ do
 end
 
 -- hard coded linear advection with Lax-Friedrichs for now, metaprog soon
+task applyFlux(dx : double,
+               dt : double,
+               cells: region(ispace(int1d), CellValues),
+               faces: region(ispace(int1d), FaceValues))
+where
+  reads(cells.phi,
+        faces.flux),
+  writes(cells.phi)
+do
+  for cell in cells do
+     cells[cell].phi = cells[cell].phi - dt * (faces[cell+1].flux - faces[cell].flux) / dx
+  end
+end
+
+-- hard coded linear advection with Lax-Friedrichs for now, metaprog soon
 task calculateFlux(vel : double,
                    dx : double,
                    dt : double,
@@ -106,7 +130,6 @@ where
 do
   var left_boundary_face : int64 = faces.ispace.bounds.lo
   var right_boundary_face : int64 = faces.ispace.bounds.hi
-  C.printf("Faces from %d to %d\n", left_boundary_face, right_boundary_face)
   -- loop on inner faces
   for face = left_boundary_face+1, right_boundary_face do
     var left : double = cells[face - 1].phi
@@ -118,12 +141,22 @@ do
   -- boundary conditions: hold end cells constant in time
   faces[0].flux = faces[1].flux
   faces[right_boundary_face].flux = faces[right_boundary_face-1].flux
-
-  -- debug
-  for face in faces do
-    C.printf("face %d flux %f\n", face, faces[face].flux)
-  end
 end
+
+task writeCells(cells: region(ispace(int1d), CellValues))
+where
+  reads(cells.phi)
+do
+  var first_cell : int64 = cells.ispace.bounds.lo
+  var last_cell : int64 = cells.ispace.bounds.hi
+  --var nx : int64 = last_cell - first_cell + 1
+  var fp = C.fopen(["output." .. NX .. ".txt"],"w")
+  for cell in cells do
+    C.fprintf(fp, "%f\n", cells[cell].phi)
+  end
+  C.fclose(fp)
+end
+
 
 task printCells(cell_region: region(ispace(int1d), CellValues))
 where
