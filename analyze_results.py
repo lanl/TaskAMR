@@ -47,7 +47,7 @@ plt.yscale('log')
 plt.xscale('log')
 plt.plot(NX,Error,'o')
 
-fit = np.polyfit(np.log(NX[5:]),np.log(Error[5:]),1)
+fit = np.polyfit(np.log(NX),np.log(Error),1)
 p = fit[0]
 A = np.exp(fit[1])
 plt.plot(NX, A * NX**p,label="NX^"+str(p))

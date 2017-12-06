@@ -1,32 +1,10 @@
+-- AMR meta programming for all models
 import "regent"
 local C = regentlib.c
 
--- global constants
+require("linear_advection")
 
-local CELLS_PER_BLOCK_X = 2
-local LEVEL_1_BLOCKS_X = 5
-local MAX_REFINEMENT_LEVEL = 3
-local NX = 40
-local MAX_NX = 640
-local CFL = 0.5
-local U = 1.0
-local DX = 1.0 / NX
-local MIN_DX = 1.0 / MAX_NX
-local DT = CFL * DX / U
-
-fspace CellValues
-{
-  phi : double,
-  bogus : bool
-}
-
-fspace FaceValues
-{
-  flux : double
-}
-
-
--- like stdlib's
+-- like stdlib's pow
 function pow(x, y)
   local value = x
   for i = 2,y do
@@ -70,17 +48,9 @@ function make_top_level_task()
       C.printf(["level " .. n .. " cells %d \n"], total)
     end)
   end
-  local fields = terralib.newlist()
-  for field,type in ipairs(CellValues:getentries()) do
-    print(field)
-    for k, v in pairs(type) do
-      print("~",k,v)
-    end
-  end
   local task top_level()
     [declare_level_regions];
     [loops];
-    [fields];
     initializeCells([level_cells[MAX_REFINEMENT_LEVEL]])
     var time : double = 0.0
     while time < 0.25 - DT do
@@ -96,89 +66,8 @@ function make_top_level_task()
   return top_level
 end
 
-task initializeCells(cell_region: region(ispace(int1d), CellValues))
-where
-  writes(cell_region.phi)
-do
-  var size : int64 = cell_region.ispace.bounds.hi - cell_region.ispace.bounds.lo + 1
-  for cell in cell_region.ispace do
-    if [int64](cell) < (size/2) then
-      cell_region[cell].phi = 1.0
-    else
-      cell_region[cell].phi = 0.0
-    end
-  end
-  C.printf("initializeCells %d cells\n", size)
-end
-
--- hard coded linear advection with Lax-Friedrichs for now, metaprog soon
-task applyFlux(dx : double,
-               dt : double,
-               cells: region(ispace(int1d), CellValues),
-               faces: region(ispace(int1d), FaceValues))
-where
-  reads(cells.phi,
-        faces.flux),
-  writes(cells.phi)
-do
-  for cell in cells do
-     cells[cell].phi = cells[cell].phi - dt * (faces[cell+1].flux - faces[cell].flux) / dx
-  end
-end
-
--- hard coded linear advection with Lax-Friedrichs for now, metaprog soon
-task calculateFlux(vel : double,
-                   dx : double,
-                   dt : double,
-                   cells: region(ispace(int1d), CellValues),
-                   faces: region(ispace(int1d), FaceValues))
-where
-  reads(cells.phi,
-        faces.flux),
-  writes(faces.flux)
-do
-  var left_boundary_face : int64 = faces.ispace.bounds.lo
-  var right_boundary_face : int64 = faces.ispace.bounds.hi
-  -- loop on inner faces
-  for face = left_boundary_face+1, right_boundary_face do
-    var left : double = cells[face - 1].phi
-    var right : double = cells[face].phi
-    var flux : double = 0.5 * vel * (left + right) +0.5 * dx * (left - right)/dt
-    faces[face].flux = flux
-  end
-
-  -- boundary conditions: hold end cells constant in time
-  faces[0].flux = faces[1].flux
-  faces[right_boundary_face].flux = faces[right_boundary_face-1].flux
-end
-
-task writeCells(cells: region(ispace(int1d), CellValues))
-where
-  reads(cells.phi)
-do
-  var first_cell : int64 = cells.ispace.bounds.lo
-  var last_cell : int64 = cells.ispace.bounds.hi
-  --var nx : int64 = last_cell - first_cell + 1
-  var fp = C.fopen(["output." .. NX .. ".txt"],"w")
-  for cell in cells do
-    C.fprintf(fp, "%f\n", cells[cell].phi)
-  end
-  C.fclose(fp)
-end
-
-
-task printCells(cell_region: region(ispace(int1d), CellValues))
-where
-  reads(cell_region.phi)
-do
-  C.printf("phi: ")
-  for cell in cell_region do
-    C.printf("%f ", cell_region[cell].phi)
-  end
-  C.printf("\n")
-end
+-- main top level task
 
 local main = make_top_level_task()
-main:printpretty()
 regentlib.start(main)
 
