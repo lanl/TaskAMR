@@ -5,18 +5,19 @@ local C = regentlib.c
 
 local CELLS_PER_BLOCK_X = 2
 local LEVEL_1_BLOCKS_X = 5
-local MAX_REFINEMENT_LEVEL = 1
-local NX = 10
+local MAX_REFINEMENT_LEVEL = 3
+local NX = 40
 local MAX_NX = 640
 local CFL = 0.5
 local U = 1.0
 local DX = 1.0 / NX
 local MIN_DX = 1.0 / MAX_NX
-local DT = CFL * MIN_DX / U
+local DT = CFL * DX / U
 
 fspace CellValues
 {
-  phi : double
+  phi : double,
+  bogus : bool
 }
 
 fspace FaceValues
@@ -69,9 +70,17 @@ function make_top_level_task()
       C.printf(["level " .. n .. " cells %d \n"], total)
     end)
   end
+  local fields = terralib.newlist()
+  for field,type in ipairs(CellValues:getentries()) do
+    print(field)
+    for k, v in pairs(type) do
+      print("~",k,v)
+    end
+  end
   local task top_level()
     [declare_level_regions];
     [loops];
+    [fields];
     initializeCells([level_cells[MAX_REFINEMENT_LEVEL]])
     var time : double = 0.0
     while time < 0.25 - DT do
