@@ -2,7 +2,7 @@
 import "regent"
 local C = regentlib.c
 
-require("linear_advection")
+require("euler")
 
 -- like stdlib's pow
 function pow(x, y)
@@ -53,13 +53,13 @@ function make_top_level_task()
     [loops];
     initializeCells([level_cells[MAX_REFINEMENT_LEVEL]])
     var time : double = 0.0
-    while time < 0.25 - DT do
-      calculateFlux(U, DX, DT, [level_cells[MAX_REFINEMENT_LEVEL]],
+    while time < T_FINAL - DT do 
+      calculateFlux(DX, DT, [level_cells[MAX_REFINEMENT_LEVEL]],
                     [level_faces[MAX_REFINEMENT_LEVEL]])
       applyFlux(DX, DT, [level_cells[MAX_REFINEMENT_LEVEL]],
                     [level_faces[MAX_REFINEMENT_LEVEL]])
       time += DT
-      C.printf("t = %f\n",time)
+      C.printf("time = %f\n",time)
     end
     writeCells([level_cells[MAX_REFINEMENT_LEVEL]])
   end
