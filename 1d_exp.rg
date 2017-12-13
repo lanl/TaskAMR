@@ -2,7 +2,7 @@
 import "regent"
 local C = regentlib.c
 
-require("euler")
+require("model")
 
 -- like stdlib's pow
 function pow(x, y)

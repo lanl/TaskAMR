@@ -4,15 +4,16 @@ local C = regentlib.c
 -- required AMR global constants
 CELLS_PER_BLOCK_X = 2
 LEVEL_1_BLOCKS_X = 5
-MAX_REFINEMENT_LEVEL = 5
+MAX_REFINEMENT_LEVEL = 6
 
 -- constants that should not exist
-local NX = 160
+local NX = 320
 local MAX_NX = 640
 
 -- model specific global constants
 local CFL = 0.5
-U = 1.0
+T_FINAL = 0.25
+local U = 1.0
 DX = 1.0 / NX
 local MIN_DX = 1.0 / MAX_NX
 DT = CFL * MIN_DX / U
@@ -62,8 +63,7 @@ do
 end
 
 -- hard coded linear advection with Lax-Friedrichs for now, metaprog soon
-task calculateFlux(vel : double,
-                   dx : double,
+task calculateFlux(dx : double,
                    dt : double,
                    cells: region(ispace(int1d), CellValues),
                    faces: region(ispace(int1d), FaceValues))
@@ -72,6 +72,7 @@ where
         faces.flux),
   writes(faces.flux)
 do
+  var vel : double = U
   var left_boundary_face : int64 = faces.ispace.bounds.lo
   var right_boundary_face : int64 = faces.ispace.bounds.hi
   -- loop on inner faces
