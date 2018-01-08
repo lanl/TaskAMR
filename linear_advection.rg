@@ -2,12 +2,12 @@ import "regent"
 local C = regentlib.c
 
 -- required AMR global constants
-CELLS_PER_BLOCK_X = 2
+CELLS_PER_BLOCK_X = 2 -- must be multilpe of 2
 LEVEL_1_BLOCKS_X = 5
-MAX_REFINEMENT_LEVEL = 6
+MAX_REFINEMENT_LEVEL = 7
 
 -- constants that should not exist
-local NX = 320
+local NX = 640
 local MAX_NX = 640
 
 -- model specific global constants
@@ -18,7 +18,7 @@ DX = 1.0 / NX
 local MIN_DX = 1.0 / MAX_NX
 DT = CFL * MIN_DX / U
 
--- model specific fields
+-- model specific fields must be in fspace's CellValues and FaceValues
 
 fspace CellValues
 {
@@ -30,7 +30,17 @@ fspace FaceValues
   flux : double
 }
 
--- model specific tasks
+-- model specific tasks must implement following API:
+-- task initializeCells(cell_region: region(ispace(int1d), CellValues))
+-- task calculateFlux(dx : double,
+--                    dt : double,
+--                    cells: region(ispace(int1d), CellValues),
+--                    faces: region(ispace(int1d), FaceValues))
+-- task applyFlux(dx : double,
+--                dt : double,
+--                cells: region(ispace(int1d), CellValues),
+--                faces: region(ispace(int1d), FaceValues))
+-- task writeCells(cells: region(ispace(int1d), CellValues))
 
 task initializeCells(cell_region: region(ispace(int1d), CellValues))
 where
