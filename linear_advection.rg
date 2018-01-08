@@ -5,6 +5,7 @@ local C = regentlib.c
 CELLS_PER_BLOCK_X = 2 -- must be multilpe of 2
 LEVEL_1_BLOCKS_X = 5
 MAX_REFINEMENT_LEVEL = 7
+NUM_PARTITIONS = 7
 
 -- constants that should not exist
 local NX = 640
