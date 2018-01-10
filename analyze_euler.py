@@ -16,35 +16,7 @@ def specific_internal_energy(P, rho):
 def get_pressure(E, rho, v):
   return (E - 0.5 * rho * v**2) * (GAMMA-1.0)
 
-parser = argparse.ArgumentParser(description='Plot convergence for fixed grid linear advection.')
-parser.add_argument('text_files',nargs='*')
-
-args = parser.parse_args()
-NX = []
-Error = []
-
-for filename in args.text_files:
-  print filename
-  resolution = filename.split('.')
-  NX.append(float(resolution[1]))
-  with open(filename,"r") as f:
-    density = []
-    momentum = []
-    energy = []
-    for line in f:
-      data = line.split()
-      density.append(float(data[0]))
-      momentum.append(float(data[1]))
-      energy.append(float(data[2]))
-    x = (0.5 + np.arange(float(len(density))) )/float(len(density))
-
-    momentum = np.array(momentum)
-    num_density = np.array(density)
-    energy = np.array(energy)
-    num_velocity = momentum / num_density
-    num_pressure = get_pressure(energy, num_density, num_velocity)
-    num_sie = specific_internal_energy(num_pressure, num_density)
-
+def reimann_solve(x):
     # Newton solve
     P_star = 0.5 * (P_l + P_r)
     u_l_star = one(P_star, P_l, rho_l, u_l)
@@ -97,6 +69,50 @@ for filename in args.text_files:
         velocity[i] = u_r
         pressure[i] = P_r
       sie[i] = specific_internal_energy(pressure[i], density[i])
+    return density, velocity, pressure, sie
+
+parser = argparse.ArgumentParser(description='Plot convergence for fixed grid linear advection.')
+parser.add_argument('text_files',nargs='*')
+
+args = parser.parse_args()
+NX = []
+Error = []
+
+plt.figure()
+plt.ylabel("density")
+plt.yticks([0,0.3,0.6,0.9,1.2])
+plt.ylim([0,1.2])
+plt.xlabel("x")
+plt.xticks([0,0.25,0.5,0.75,1.])
+x = 1.0e-3 * (0.5 + np.arange(float(1000)) )
+density, velocity, pressure, sie = reimann_solve(x)
+plt.plot(x,density,label='anal')
+
+for filename in args.text_files:
+  print filename
+  resolution = filename.split('.')
+  NX.append(float(resolution[1]))
+  with open(filename,"r") as f:
+    density = []
+    momentum = []
+    energy = []
+    for line in f:
+      data = line.split()
+      density.append(float(data[0]))
+      momentum.append(float(data[1]))
+      energy.append(float(data[2]))
+    x = (0.5 + np.arange(float(len(density))) )/float(len(density))
+
+    momentum = np.array(momentum)
+    num_density = np.array(density)
+    energy = np.array(energy)
+    num_velocity = momentum / num_density
+    num_pressure = get_pressure(energy, num_density, num_velocity)
+    num_sie = specific_internal_energy(num_pressure, num_density)
+
+    plt.plot(x,num_density,'--',label='NX='+str(NX[-1]))
+
+    density, velocity, pressure, sie = reimann_solve(x)
 
     #plt.figure()
     #plt.ylabel("density")
@@ -104,9 +120,7 @@ for filename in args.text_files:
     #plt.ylim([0,1.2])
     #plt.xlabel("x")
     #plt.xticks([0,0.25,0.5,0.75,1.])
-    #plt.plot(x,num_density,'o',label='L-F')
     #plt.plot(x,density,label='anal')
-    #plt.legend(loc='best')
 
     #plt.figure()
     #plt.ylabel("velocity")
@@ -155,6 +169,8 @@ for filename in args.text_files:
 
 print NX
 print Error
+plt.legend(loc='best')
+
 plt.figure()
 plt.title("Convergence plot")
 plt.ylabel("L_2 error")
