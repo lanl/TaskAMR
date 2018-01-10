@@ -111,26 +111,8 @@ function make_top_level_task()
       for color in [cell_partition_for_level[n]].colors do
         var limits = [cell_partition_for_level[n]][color].bounds
         var num_cells : int64 = limits.hi - limits.lo + 1
-        C.printf("%d ", num_cells)
-      end
-      C.printf("\nghost ")
-
-      for color in [bloated_partition_for_level[n]].colors do
-        var limits = [bloated_partition_for_level[n]][color].bounds
-        C.printf("%d:%d ", limits.lo, limits.hi)
       end
 
-      total = 0
-      for face in [face_region_for_level[n]] do
-        total = total + 1
-      end
-      C.printf(["level " .. n .. " faces %d \n"], total)
-      for color in [face_partition_for_level[n]].colors do
-        var limits = [face_partition_for_level[n]][color].bounds
-        var num_faces : int64 = limits.hi - limits.lo + 1
-        C.printf("%d ", num_faces)
-      end
-      C.printf("\n")
     end)
   end
 
@@ -138,13 +120,15 @@ function make_top_level_task()
   local task top_level()
     [declare_level_regions];
     [loops];
+    var ratio_to_level1 : int64 = [pow(2, MAX_REFINEMENT_LEVEL) / 2]
+    var num_cells : int64 = CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * ratio_to_level1
     initializeCells([cell_region_for_level[MAX_REFINEMENT_LEVEL]])
     var time : double = 0.0
     while time < T_FINAL - DT do
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
-        calculateFlux(DX, DT, [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
+        calculateFlux(num_cells, DX, DT, [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
                     [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end
 
