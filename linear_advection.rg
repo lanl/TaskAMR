@@ -1,23 +1,20 @@
 import "regent"
 local C = regentlib.c
 
--- required AMR global constants
+-- model specific local constants
+local CFL = 0.5
+local U = 1.0
+local MAX_NX = 640
+local MIN_DX = 1.0 / MAX_NX
+
+-- required global constants
 CELLS_PER_BLOCK_X = 2 -- must be multilpe of 2
 LEVEL_1_BLOCKS_X = 5
-MAX_REFINEMENT_LEVEL = 4
+MAX_REFINEMENT_LEVEL = 6
 NUM_PARTITIONS = 7
-
--- constants that should not exist
-local NX = 80
-local MAX_NX = 640
-
--- model specific global constants
-local CFL = 0.5
 T_FINAL = 0.25
-local U = 1.0
-DX = 1.0 / NX
-local MIN_DX = 1.0 / MAX_NX
 DT = CFL * MIN_DX / U
+LENGTH_X = 1.0
 
 -- model specific fields must be in fspace's CellValues and FaceValues
 
@@ -33,7 +30,8 @@ fspace FaceValues
 
 -- model specific tasks must implement following API:
 -- task initializeCells(cell_region: region(ispace(int1d), CellValues))
--- task calculateFlux(dx : double,
+-- task calculateFlux(num_cells : int64,
+--                    dx : double,
 --                    dt : double,
 --                    cells: region(ispace(int1d), CellValues),
 --                    faces: region(ispace(int1d), FaceValues))
@@ -41,7 +39,8 @@ fspace FaceValues
 --                dt : double,
 --                cells: region(ispace(int1d), CellValues),
 --                faces: region(ispace(int1d), FaceValues))
--- task writeCells(cells: region(ispace(int1d), CellValues))
+-- task writeCells(num_cells : int64,
+--                 cells: region(ispace(int1d), CellValues))
 
 task initializeCells(cell_region: region(ispace(int1d), CellValues))
 where
@@ -122,18 +121,22 @@ do
   end
 end
 
-task writeCells(cells: region(ispace(int1d), CellValues))
+task writeCells(nx : int64,
+                cells: region(ispace(int1d), CellValues))
 where
   reads(cells.phi)
 do
   var first_cell : int64 = cells.ispace.bounds.lo
   var last_cell : int64 = cells.ispace.bounds.hi
-  --var nx : int64 = last_cell - first_cell + 1
-  var fp = C.fopen(["output." .. NX .. ".txt"],"w")
+  var buf : &int8
+  buf = [&int8](C.malloc(40))
+  C.sprintf(buf, "linear.%d.txt", nx)
+  var fp = C.fopen(buf,"w")
   for cell in cells do
     C.fprintf(fp, "%f\n", cells[cell].phi)
   end
   C.fclose(fp)
+  C.free([&opaque](buf))
 end
 
 

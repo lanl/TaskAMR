@@ -3,21 +3,18 @@
 import "regent"
 local C = regentlib.c
 
--- required AMR global constants
-CELLS_PER_BLOCK_X = 5
-LEVEL_1_BLOCKS_X = 5
-MAX_REFINEMENT_LEVEL = 8
-NUM_PARTITIONS = 3
-
--- constants that should not exist
-local NX = 3200
+-- model specific local constants
 local MAX_NX = 3200
-
--- model specific global constants
-DX = 1.0 / NX
 local MIN_DX = 1.0 / MAX_NX
+
+-- required global constants
+CELLS_PER_BLOCK_X = 5 -- must be a multiple of 2
+LEVEL_1_BLOCKS_X = 5
+MAX_REFINEMENT_LEVEL = 1
+NUM_PARTITIONS = 3
 T_FINAL = 0.142681382
 DT = 0.2 * MIN_DX  -- dt < dx / (2^0.5 * (u+c))
+LENGTH_X = 1.0
 
 -- model specific local constants
 local GAMMA = 1.4
@@ -196,7 +193,8 @@ do
   end
 end
 
-task writeCells(cells: region(ispace(int1d), CellValues))
+task writeCells(nx : int64,
+                cells: region(ispace(int1d), CellValues))
 where
   reads(cells.{density,
                momentum,
@@ -204,12 +202,15 @@ where
 do
   var first_cell : int64 = cells.ispace.bounds.lo
   var last_cell : int64 = cells.ispace.bounds.hi
-  --var nx : int64 = last_cell - first_cell + 1
-  var fp = C.fopen(["euler." .. NX .. ".txt"],"w")
+  var buf : &int8
+  buf = [&int8](C.malloc(40))
+  C.sprintf(buf, "euler.%d.txt", nx)
+  var fp = C.fopen(buf ,"w")
   for cell in cells do
     C.fprintf(fp, "%f %f %f\n", cells[cell].density, cells[cell].momentum,
               cells[cell].energy)
   end
   C.fclose(fp)
+  C.free([&opaque](buf))
 end
 

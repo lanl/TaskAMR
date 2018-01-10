@@ -82,66 +82,69 @@ function make_top_level_task()
   local bloated_partition_for_level = terralib.newlist()
 
   -- array of region declarations
-  local declare_level_regions = terralib.newlist()
+  local declarations = terralib.newlist()
 
   for n = 1, MAX_REFINEMENT_LEVEL do
     local cell_region, declare_cells, face_region, declare_faces, cell_partition, declare_cpart,
       face_partition, declare_fpart, bloated_partition, declare_bpart = make_level_regions(n)
     cell_region_for_level:insert(cell_region)
-    declare_level_regions:insert(declare_cells)
+    declarations:insert(declare_cells)
     face_region_for_level:insert(face_region)
-    declare_level_regions:insert(declare_faces)
+    declarations:insert(declare_faces)
     cell_partition_for_level:insert(cell_partition)
-    declare_level_regions:insert(declare_cpart)
+    declarations:insert(declare_cpart)
     face_partition_for_level:insert(face_partition)
-    declare_level_regions:insert(declare_fpart)
+    declarations:insert(declare_fpart)
     bloated_partition_for_level:insert(bloated_partition)
-    declare_level_regions:insert(declare_bpart)
+    declarations:insert(declare_bpart)
   end
 
-  -- meta programming to create loop over levels
-  local loops = terralib.newlist()
-  for n = 1, MAX_REFINEMENT_LEVEL do
-    loops:insert(rquote
-      var total : int64 = 0
-      for cell in [cell_region_for_level[n]] do
-        total = total + 1
-      end
-      C.printf(["level " .. n .. " cells %d \n"], total)
-      for color in [cell_partition_for_level[n]].colors do
-        var limits = [cell_partition_for_level[n]][color].bounds
-        var num_cells : int64 = limits.hi - limits.lo + 1
-      end
+  local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
 
+  -- meta programming to create loop over levels
+  local init_num_cells = terralib.newlist()
+  init_num_cells:insert(rquote var [num_cells] end)
+  for n = 1, MAX_REFINEMENT_LEVEL do
+    init_num_cells:insert(rquote
+      var limits = [cell_region_for_level[n]].ispace.bounds
+      var total : int64 = limits.hi - limits.lo + 1
+      [num_cells][n] = total
     end)
   end
 
   -- create top_level task with previous meta programming
   local task top_level()
-    [declare_level_regions];
-    [loops];
-    var ratio_to_level1 : int64 = [pow(2, MAX_REFINEMENT_LEVEL) / 2]
-    var num_cells : int64 = CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * ratio_to_level1
+    [declarations];
+    [init_num_cells];
+
+    var dx : double[MAX_REFINEMENT_LEVEL + 1]
+    for level = 1, MAX_REFINEMENT_LEVEL + 1 do
+      dx[level] = LENGTH_X / [double]([num_cells][level])
+      C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], dx[level])
+    end
+
     initializeCells([cell_region_for_level[MAX_REFINEMENT_LEVEL]])
     var time : double = 0.0
     while time < T_FINAL - DT do
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
-        calculateFlux(num_cells, DX, DT, [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
-                    [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
+        calculateFlux(num_cells[MAX_REFINEMENT_LEVEL], dx[MAX_REFINEMENT_LEVEL], DT,
+        [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
+        [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
-          applyFlux(DX, DT, [cell_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
-                    [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
+          applyFlux(dx[MAX_REFINEMENT_LEVEL], DT,
+          [cell_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
+          [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end
 
       time += DT
       C.printf("time = %f\n",time)
     end
-    writeCells([cell_region_for_level[MAX_REFINEMENT_LEVEL]])
+    writeCells([num_cells][MAX_REFINEMENT_LEVEL], [cell_region_for_level[MAX_REFINEMENT_LEVEL]])
   end
   return top_level
 end

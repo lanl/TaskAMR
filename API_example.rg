@@ -3,10 +3,13 @@ local C = regentlib.c
 
 -- required AMR global constants
 
-CELLS_PER_BLOCK_X = -- must be multilpe of 2
+CELLS_PER_BLOCK_X = -- must be multiple of 2
 LEVEL_1_BLOCKS_X = -- number of blocks at coarsest level
 MAX_REFINEMENT_LEVEL = -- every level above 1 doubles max resolution
 NUM_PARTITIONS = -- how many parallel pieces to break problem into (suggestion)
+LENGTH_X = -- DX = LENGTH_X / NX
+DT = -- currently time steps are fixed
+T_FINAL == -- simulation ends at T_FINAL <= time < T_FINAL + DT
 
 -- model specific fields must be in fspace's CellValues and FaceValues
 
@@ -29,5 +32,6 @@ fspace FaceValues
 --                dt : double,
 --                cells: region(ispace(int1d), CellValues),
 --                faces: region(ispace(int1d), FaceValues))
--- task writeCells(cells: region(ispace(int1d), CellValues))
+-- task writeCells(num_cells : int64,
+--                 cells: region(ispace(int1d), CellValues))
 
