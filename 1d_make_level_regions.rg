@@ -1,18 +1,7 @@
 import "regent"
 local C = regentlib.c
 
--- keeps track of refinement state of the binary tree
--- might be more performant if a bitfield was used
-fspace RefinementBits
-{
-  isRefined: bool,
-  needsRefinement: bool,
-  wantsCoarsening: bool,
-  plusXMoreRefined: bool,
-  minusXMoreRefined: bool,
-  plusXMoreCoarse: bool,
-  minusXMoreCoarse: bool
-}
+require("refinement_bits")
 
 -- like stdlib's pow
 function pow(x, y)

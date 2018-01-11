@@ -41,9 +41,8 @@ function make_top_level_task()
     declarations:insert(declare_bpart)
   end
 
+  -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
-
-  -- meta programming to create loop over levels
   local init_num_cells = terralib.newlist()
   init_num_cells:insert(rquote var [num_cells] end)
   for n = 1, MAX_REFINEMENT_LEVEL do
