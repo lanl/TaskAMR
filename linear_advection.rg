@@ -1,6 +1,8 @@
 import "regent"
 local C = regentlib.c
 
+require("global_const")
+
 -- model specific local constants
 local CFL = 0.5
 local U = 1.0
@@ -8,13 +10,7 @@ local MAX_NX = 640
 local MIN_DX = 1.0 / MAX_NX
 
 -- required global constants
-CELLS_PER_BLOCK_X = 2 -- must be multilpe of 2
-LEVEL_1_BLOCKS_X = 5
-MAX_REFINEMENT_LEVEL = 6
-NUM_PARTITIONS = 7
-T_FINAL = 0.25
 DT = CFL * MIN_DX / U
-LENGTH_X = 1.0
 
 -- model specific fields must be in fspace's CellValues and FaceValues
 
