@@ -10,8 +10,10 @@ require("1d_make_level_regions")
 function make_top_level_task()
 
   -- arrays of region by level
+  local meta_region_for_level = terralib.newlist()
   local cell_region_for_level = terralib.newlist()
   local face_region_for_level = terralib.newlist()
+  local meta_partition_for_level = terralib.newlist()
   local cell_partition_for_level = terralib.newlist()
   local face_partition_for_level = terralib.newlist()
   local bloated_partition_for_level = terralib.newlist()
@@ -21,7 +23,12 @@ function make_top_level_task()
 
   for n = 1, MAX_REFINEMENT_LEVEL do
     local cell_region, declare_cells, face_region, declare_faces, cell_partition, declare_cpart,
-      face_partition, declare_fpart, bloated_partition, declare_bpart = make_level_regions(n, NUM_PARTITIONS)
+      face_partition, declare_fpart, bloated_partition, declare_bpart, meta_region,
+      declare_meta, meta_partition, declare_mpart = make_level_regions(n, NUM_PARTITIONS)
+    meta_region_for_level:insert(meta_region)
+    declarations:insert(declare_meta)
+    meta_partition_for_level:insert(meta_partition)
+    declarations:insert(declare_mpart)
     cell_region_for_level:insert(cell_region)
     declarations:insert(declare_cells)
     face_region_for_level:insert(face_region)

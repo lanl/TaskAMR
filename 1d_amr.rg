@@ -5,20 +5,7 @@ local C = regentlib.c
 -- implement all required model APIs and link model.rg to your file
 require("model")
 
--- keeps track of refinement state of the binary tree
--- might be more performant if a bitfield was used
-fspace RefinementBits
-{
-  isRefined: bool,
-  needsRefinement: bool,
-  wantsCoarsening: bool,
-  plusXMoreRefined: bool,
-  minusXMoreRefined: bool,
-  plusXMoreCoarse: bool,
-  minusXMoreCoarse: bool
-}
-
--- like stdlib's pow
+- like stdlib's pow
 function pow(x, y)
   local value = x
   for i = 2,y do
