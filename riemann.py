@@ -83,9 +83,9 @@ def rho_star(P_star, P, rho):
 def verify_Rankine_Hugoniot(P_u, rho_u, v_u, P_d, rho_d, v_d, S):
     E_u = get_energy(P_u, rho_u, v_u)
     E_d = get_energy(P_d, rho_d, v_d)
-    print v_u * (E_u + P_u) - v_d*(E_d+P_d),"vs",S*(E_u - E_d)
-    print rho_u*v_u**2+P_u - rho_d*v_d**2 - P_d,"vs",S*(rho_u*v_u-rho_d*v_d)
-    print rho_u*v_u - rho_d*v_d,"vs",S*(rho_u-rho_d)
+    #print v_u * (E_u + P_u) - v_d*(E_d+P_d),"vs",S*(E_u - E_d)
+    #print rho_u*v_u**2+P_u - rho_d*v_d**2 - P_d,"vs",S*(rho_u*v_u-rho_d*v_d)
+    #print rho_u*v_u - rho_d*v_d,"vs",S*(rho_u-rho_d)
 
 if __name__ == "__main__":
 

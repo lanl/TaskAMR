@@ -71,118 +71,78 @@ def reimann_solve(x):
       sie[i] = specific_internal_energy(pressure[i], density[i])
     return density, velocity, pressure, sie
 
-parser = argparse.ArgumentParser(description='Plot convergence for fixed grid linear advection.')
-parser.add_argument('text_files',nargs='*')
+def measure_error(filename):
+    with open(filename,"r") as f:
+      density = []
+      momentum = []
+      energy = []
+      for line in f:
+        data = line.split()
+        density.append(float(data[0]))
+        momentum.append(float(data[1]))
+        energy.append(float(data[2]))
+      x = (0.5 + np.arange(float(len(density))) )/float(len(density))
 
-args = parser.parse_args()
-NX = []
-Error = []
+      momentum = np.array(momentum)
+      num_density = np.array(density)
+      energy = np.array(energy)
+      num_velocity = momentum / num_density
+      num_pressure = get_pressure(energy, num_density, num_velocity)
+      num_sie = specific_internal_energy(num_pressure, num_density)
 
-plt.figure()
-plt.ylabel("density")
-plt.yticks([0,0.3,0.6,0.9,1.2])
-plt.ylim([0,1.2])
-plt.xlabel("x")
-plt.xticks([0,0.25,0.5,0.75,1.])
-x = 1.0e-3 * (0.5 + np.arange(float(1000)) )
-density, velocity, pressure, sie = reimann_solve(x)
-plt.plot(x,density,label='anal')
+      density, velocity, pressure, sie = reimann_solve(x)
 
-for filename in args.text_files:
-  print filename
-  resolution = filename.split('.')
-  NX.append(float(resolution[1]))
-  with open(filename,"r") as f:
-    density = []
-    momentum = []
-    energy = []
-    for line in f:
-      data = line.split()
-      density.append(float(data[0]))
-      momentum.append(float(data[1]))
-      energy.append(float(data[2]))
-    x = (0.5 + np.arange(float(len(density))) )/float(len(density))
+      sie_L2 = np.mean((num_sie - sie)**2)
+      P_L2 = np.mean((num_pressure - pressure)**2)
+      v_L2 = np.mean((num_velocity - velocity)**2)
+      rho_L2 = np.mean((num_density - density)**2)
+      L2 = np.mean([sie_L2, P_L2, v_L2, rho_L2])
 
-    momentum = np.array(momentum)
-    num_density = np.array(density)
-    energy = np.array(energy)
-    num_velocity = momentum / num_density
-    num_pressure = get_pressure(energy, num_density, num_velocity)
-    num_sie = specific_internal_energy(num_pressure, num_density)
+    return L2, x, num_density, density
 
+if __name__== "__main__":
+ 
+  parser = argparse.ArgumentParser(description='Plot convergence for fixed grid linear advection.')
+  parser.add_argument('text_files',nargs='*')
+
+  args = parser.parse_args()
+  NX = []
+  Error = []
+
+  plt.figure()
+  plt.ylabel("density")
+  plt.yticks([0,0.3,0.6,0.9,1.2])
+  plt.ylim([0,1.2])
+  plt.xlabel("x")
+  plt.xticks([0,0.25,0.5,0.75,1.])
+  x = 1.0e-3 * (0.5 + np.arange(float(1000)) )
+  density, velocity, pressure, sie = reimann_solve(x)
+  plt.plot(x,density,label='anal')
+
+  for filename in args.text_files:
+    print filename
+    resolution = filename.split('.')
+    NX.append(float(resolution[1]))
+    L2, x, num_density, density = measure_error(filename)
     plt.plot(x,num_density,'--',label='NX='+str(NX[-1]))
-
-    density, velocity, pressure, sie = reimann_solve(x)
-
-    #plt.figure()
-    #plt.ylabel("density")
-    #plt.yticks([0,0.3,0.6,0.9,1.2])
-    #plt.ylim([0,1.2])
-    #plt.xlabel("x")
-    #plt.xticks([0,0.25,0.5,0.75,1.])
-    #plt.plot(x,density,label='anal')
-
-    #plt.figure()
-    #plt.ylabel("velocity")
-    #plt.yticks([0,0.3,0.6,0.9,1.2])
-    #plt.ylim([0,1.2])
-    #plt.xlabel("x")
-    #plt.xticks([0,0.25,0.5,0.75,1.])
-    #plt.plot(x,num_velocity,'o',label='L-F')
-    #plt.plot(x,velocity,label='anal')
-    #plt.legend(loc='best')
-
-    #plt.figure()
-    #plt.ylabel("pressure")
-    #plt.yticks([0,0.3,0.6,0.9,1.2])
-    #plt.ylim([0,1.2])
-    #plt.xlabel("x")
-    #plt.xticks([0,0.25,0.5,0.75,1.])
-    #plt.plot(x,num_pressure,'o',label='L-F')
-    #plt.plot(x,pressure,label='anal')
-    #plt.legend(loc='best')
-
-    #plt.figure()
-    #plt.ylabel("speed of sound")
-    #plt.xlabel("x")
-    #plt.xticks([0,0.25,0.5,0.75,1.])
-    #plt.plot(x,speed_of_sound(num_pressure,num_density),'o',label='L-F')
-    #plt.plot(x,speed_of_sound(pressure,density),label='anal')
-    #plt.legend(loc='best')
-
-    #plt.figure()
-    #plt.ylabel("specific internal energy")
-    #plt.yticks([1,1.5,2.0,2.5,3.0])
-    #plt.ylim([0,3.0])
-    #plt.xlabel("x")
-    #plt.xticks([0,0.25,0.5,0.75,1.])
-    #plt.plot(x,num_sie,'--',label='L-F')
-    #plt.plot(x,sie,':',label='anal')
-    #plt.legend(loc='best')
-
-    sie_L2 = np.mean((num_sie - sie)**2)
-    P_L2 = np.mean((num_pressure - pressure)**2)
-    v_L2 = np.mean((num_velocity - velocity)**2)
-    rho_L2 = np.mean((num_density - density)**2)
-    L2 = np.mean([sie_L2, P_L2, v_L2, rho_L2])
     Error.append(L2)
 
-print NX
-print Error
-plt.legend(loc='best')
+  print NX
+  print Error
+  plt.legend(loc='best')
 
-plt.figure()
-plt.title("Convergence plot")
-plt.ylabel("L_2 error")
-plt.xlabel("NX")
-plt.yscale('log')
-plt.xscale('log')
-plt.plot(NX,Error,'o')
+  plt.figure()
+  plt.title("Convergence plot")
+  plt.ylabel("L_2 error")
+  plt.xlabel("NX")
+  plt.yscale('log')
+  plt.xscale('log')
+  plt.plot(NX,Error,'o')
 
-fit = np.polyfit(np.log(NX[5:]),np.log(Error[5:]),1)
-p = fit[0]
-A = np.exp(fit[1])
-plt.plot(NX, A * NX**p,label="NX^"+str(p))
-plt.legend(loc='best')
-plt.show()
+  fit = np.polyfit(np.log(NX[5:]),np.log(Error[5:]),1)
+  p = fit[0]
+  A = np.exp(fit[1])
+  plt.plot(NX, A * NX**p,label="NX^"+str(p))
+  plt.legend(loc='best')
+  plt.show()
 

@@ -3,18 +3,14 @@
 import "regent"
 local C = regentlib.c
 
+require("global_const")
+
 -- model specific local constants
 local MAX_NX = 3200
 local MIN_DX = 1.0 / MAX_NX
 
 -- required global constants
-CELLS_PER_BLOCK_X = 5 -- must be a multiple of 2
-LEVEL_1_BLOCKS_X = 5
-MAX_REFINEMENT_LEVEL = 1
-NUM_PARTITIONS = 3
-T_FINAL = 0.142681382
 DT = 0.2 * MIN_DX  -- dt < dx / (2^0.5 * (u+c))
-LENGTH_X = 1.0
 
 -- model specific local constants
 local GAMMA = 1.4
