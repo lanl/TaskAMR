@@ -215,6 +215,7 @@ where
   reads(faces.grad),
   reads writes(blocks.needsRefinement)
 do
+  var needs_regrid : int64 = 0
   var first_face : int64 = faces.ispace.bounds.lo
 
   var start_block : int64 = blocks.ispace.bounds.lo
@@ -222,13 +223,191 @@ do
 
   for block = start_block, stop_block do
     C.printf("block %d\n", block)
-    var start_face : int64 = first_face + (CELLS_PER_BLOCK_X) * (block - start_block)
+    var start_face : int64 = first_face + CELLS_PER_BLOCK_X * (block - start_block)
     var stop_face : int64 = start_face + CELLS_PER_BLOCK_X + 1
     for face = start_face, stop_face do
       if MATH.fabs(faces[face].grad) > MAX_GRAD then
         blocks[block].needsRefinement = true
+        needs_regrid = 1
       end
       C.printf("face %d %f %d\n", face, faces[face].grad, blocks[block].needsRefinement)
     end -- for face
   end -- for block
+
+  return needs_regrid
 end
+
+task interpolateToChildren(num_children: int64,
+                           blocks: region(ispace(int1d), RefinementBits),
+                           parents: region(ispace(int1d), CellValues),
+                           children: region(ispace(int1d), CellValues))
+where
+  reads (blocks.needsRefinement),
+  reads (parents.phi),
+  reads writes (children.phi)
+do
+  var first_child : int64 = children.ispace.bounds.lo
+  var first_block : int64 = blocks.ispace.bounds.lo
+
+  for block in blocks do
+    C.printf("block %d\n", block)
+    if blocks[block].needsRefinement then
+      var start_child : int64 = first_child +  2 * CELLS_PER_BLOCK_X * (block - first_block)
+      var stop_child : int64 = start_child + 2 * CELLS_PER_BLOCK_X
+
+      if start_child == 0 then
+        children[0].phi = parents[0].phi
+        C.printf("child %d : %f\n", 0, children[0].phi)
+        start_child += 1
+      end
+
+      if stop_child == num_children then
+        stop_child -= 1
+        children[stop_child].phi = parents[(stop_child-1)/2].phi
+        C.printf("child %d : %f\n", stop_child, children[stop_child].phi)
+      end
+
+      for child = start_child, stop_child do
+        var left_parent : int64 = (child - 1) / 2
+        var right_parent : int64 = (child + 1) / 2
+        var left_parent_x : double = 2.0 * [double](left_parent) + 0.5
+        var right_parent_x : double = 2.0 * [double](right_parent) + 0.5
+        children[child].phi = parents[left_parent].phi + ([double](child) - left_parent_x) *
+          (parents[right_parent].phi - parents[left_parent].phi) / (right_parent_x - left_parent_x)
+            C.printf("child %d : %f\n",child, children[child].phi)
+      end
+
+    end -- needsRefinement
+  end -- block
+
+end -- interpolateToChildren
+
+task updateRefinementBits(num_blocks: int64,
+                          blocks: region(ispace(int1d), RefinementBits),
+                          ghosts: region(ispace(int1d), RefinementBits),
+                          children: region(ispace(int1d), RefinementBits))
+where
+  reads (ghosts.needsRefinement),
+  writes (blocks.{isActive,
+                  isRefined,
+                  plusXMoreRefined,
+                  minusXMoreRefined,
+                  plusXMoreCoarse,
+                  minusXMoreCoarse}),
+  writes (children.isActive)
+do
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+
+  for block = start_block, stop_block do
+
+    if ghosts[block].needsRefinement then
+
+      blocks[block].isRefined = true
+      blocks[block].isActive = false
+      children[2*block].isActive = true
+      children[2*block+1].isActive = true
+
+      if block == 0 then
+
+        blocks[block].minusXMoreCoarse = false
+        blocks[block].minusXMoreRefined = false
+
+      else
+
+        if ghosts[block-1].needsRefinement then
+          blocks[block].minusXMoreCoarse = false
+          blocks[block].minusXMoreRefined = false
+        else
+          blocks[block].minusXMoreCoarse = true
+          blocks[block].minusXMoreRefined = false
+        end
+
+      end -- not block 0
+
+      if block == (num_blocks -1 ) then
+
+        blocks[block].plusXMoreCoarse = false
+        blocks[block].plusXMoreRefined = false
+
+      else
+
+        if ghosts[block+1].needsRefinement then
+          blocks[block].plusXMoreCoarse = false
+          blocks[block].plusXMoreRefined = false
+        else
+          blocks[block].plusXMoreCoarse = true
+          blocks[block].plusXMoreRefined = false
+        end
+
+      end -- not last block
+
+    else -- needsRefinement
+
+      blocks[block].isRefined = false
+
+      if block == 0 then
+
+        blocks[block].minusXMoreCoarse = false
+        blocks[block].minusXMoreRefined = false
+
+      else
+
+        if ghosts[block-1].needsRefinement then
+          blocks[block].minusXMoreCoarse = false
+          blocks[block].minusXMoreRefined = true
+        else
+          blocks[block].minusXMoreCoarse = false
+          blocks[block].minusXMoreRefined = false
+        end
+
+      end -- not block 0
+
+      if block == (num_blocks -1 ) then
+
+        blocks[block].plusXMoreCoarse = false
+        blocks[block].plusXMoreRefined = false
+
+      else
+
+        if ghosts[block+1].needsRefinement then
+          blocks[block].plusXMoreCoarse = false
+          blocks[block].plusXMoreRefined = true
+        else
+          blocks[block].plusXMoreCoarse = false
+          blocks[block].plusXMoreRefined = false
+        end
+
+      end -- not last block
+
+    end -- not needsRefinement
+
+  end -- block
+
+end -- updateRefinementBits
+
+task writeAMRCells(ncells : int64,
+                   blocks: region(ispace(int1d), RefinementBits),
+                   cells: region(ispace(int1d), CellValues))
+where
+  reads(cells.phi),
+  reads(blocks.isActive)
+do
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+  var buf : &int8
+  buf = [&int8](C.malloc(60))
+  C.sprintf(buf, "linear.%d.%d.txt", ncells, start_block)
+  var fp = C.fopen(buf,"w")
+  for block = start_block, stop_block do
+    if blocks[block].isActive then
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X
+      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X
+      for cell = start_cell, stop_cell do
+        C.fprintf(fp, "%f %f\n", LENGTH_X * (cell + 0.5) / [double](ncells), cells[cell].phi)
+      end
+    end -- is Active
+  end -- block
+  C.fclose(fp)
+  C.free([&opaque](buf))
+end -- writeAMRCells

@@ -4,6 +4,7 @@ import "regent"
 -- might be more performant if a bitfield was used
 fspace RefinementBits
 {
+  isActive: bool,
   isRefined: bool,
   needsRefinement: bool,
   wantsCoarsening: bool,

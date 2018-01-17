@@ -30,7 +30,28 @@ function make_level_regions(n, num_partitions)
 
   local meta_partition = regentlib.newsymbol("level_" .. n .. "_meta_partition")
   local mpart_declaration =
-    rquote var [meta_partition] = partition(equal, [meta_region], ispace(int1d, num_partitions)) end
+    rquote var [meta_partition] = partition(equal, [meta_region], ispace(int1d, num_partitions))
+      end
+
+  local bloated_meta_partition = regentlib.newsymbol("level_" .. n .. "_bloated_meta_partition")
+  local bmeta_declaration = rquote
+    var coloring = C.legion_domain_point_coloring_create()
+    for color in meta_partition.colors do
+      var limits = meta_partition[color].bounds
+      var first_meta : int64 = limits.lo - 1
+      var last_meta : int64 = limits.hi + 1
+      if first_meta < 0 then
+        first_meta = 0
+      end
+      if last_meta >= num_metas then
+        last_meta = num_metas - 1
+      end
+      C.legion_domain_point_coloring_color_domain(coloring, [int1d](color), rect1d {first_meta,
+        last_meta})
+    end
+    var [bloated_meta_partition] = partition(aliased, [meta_region], coloring, meta_partition.colors)
+  end
+
 
   local cell_partition = regentlib.newsymbol("level_" .. n .. "_cell_partition")
   local cpart_declaration = rquote
@@ -86,7 +107,8 @@ function make_level_regions(n, num_partitions)
 
   return cell_region, cell_declaration, face_region, face_declaration, cell_partition,
     cpart_declaration, face_partition, fpart_declaration, bloated_partition, bpart_declaration,
-    meta_region, meta_declaration, meta_partition, mpart_declaration
-end
+    meta_region, meta_declaration, meta_partition, mpart_declaration, bloated_meta_partition,
+    bmeta_declaration
 
+end
 

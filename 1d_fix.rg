@@ -24,7 +24,8 @@ function make_top_level_task()
   for n = 1, MAX_REFINEMENT_LEVEL do
     local cell_region, declare_cells, face_region, declare_faces, cell_partition, declare_cpart,
       face_partition, declare_fpart, bloated_partition, declare_bpart, meta_region,
-      declare_meta, meta_partition, declare_mpart = make_level_regions(n, NUM_PARTITIONS)
+      declare_meta, meta_partition, declare_mpart, bmeta_partition, declare_bmpart
+      = make_level_regions(n, NUM_PARTITIONS)
     meta_region_for_level:insert(meta_region)
     declarations:insert(declare_meta)
     meta_partition_for_level:insert(meta_partition)
