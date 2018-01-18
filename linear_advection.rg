@@ -397,7 +397,7 @@ do
   var stop_block : int64 = blocks.ispace.bounds.hi + 1
   var buf : &int8
   buf = [&int8](C.malloc(60))
-  C.sprintf(buf, "linear.%d.%d.txt", ncells, start_block)
+  C.sprintf(buf, "linear_amr.%d.%d.txt", ncells, start_block)
   var fp = C.fopen(buf,"w")
   for block = start_block, stop_block do
     if blocks[block].isActive then
