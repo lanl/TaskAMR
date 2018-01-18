@@ -12,7 +12,27 @@ function pow(x, y)
   return value
 end
 
--- meta programming to create regions for levels 1 to MAX_REFINEMENT_LEVEL
+local function declare_bloated_partition(bloated_partition, old_partition, old_region, num_pts)
+  local declaration = rquote
+    var coloring = C.legion_domain_point_coloring_create()
+    for color in old_partition.colors do
+      var limits = old_partition[color].bounds
+      var first : int64 = limits.lo - 1
+      var last : int64 = limits.hi + 1
+      if first < 0 then
+        first = 0
+      end
+      if last >= num_pts then
+        last = num_pts - 1
+      end
+      C.legion_domain_point_coloring_color_domain(coloring, [int1d](color), rect1d {first, last})
+    end
+    var [bloated_partition] = partition(aliased, [old_region], coloring, old_partition.colors)
+  end
+  return declaration
+end
+
+-- meta programming to create regions and partitions for levels 1 to MAX_REFINEMENT_LEVEL
 function make_level_regions(n, num_partitions)
 
   local ratio_to_level1 = pow(2, n) / 2
@@ -34,24 +54,8 @@ function make_level_regions(n, num_partitions)
       end
 
   local bloated_meta_partition = regentlib.newsymbol("level_" .. n .. "_bloated_meta_partition")
-  local bmeta_declaration = rquote
-    var coloring = C.legion_domain_point_coloring_create()
-    for color in meta_partition.colors do
-      var limits = meta_partition[color].bounds
-      var first_meta : int64 = limits.lo - 1
-      var last_meta : int64 = limits.hi + 1
-      if first_meta < 0 then
-        first_meta = 0
-      end
-      if last_meta >= num_metas then
-        last_meta = num_metas - 1
-      end
-      C.legion_domain_point_coloring_color_domain(coloring, [int1d](color), rect1d {first_meta,
-        last_meta})
-    end
-    var [bloated_meta_partition] = partition(aliased, [meta_region], coloring, meta_partition.colors)
-  end
-
+  local bmeta_declaration = declare_bloated_partition(bloated_meta_partition, meta_partition,
+    meta_region, num_metas)
 
   local cell_partition = regentlib.newsymbol("level_" .. n .. "_cell_partition")
   local cpart_declaration = rquote
@@ -67,23 +71,8 @@ function make_level_regions(n, num_partitions)
   end
 
   local bloated_partition = regentlib.newsymbol("level_" .. n .. "_bloated_partition")
-  local bpart_declaration = rquote
-    var coloring = C.legion_domain_point_coloring_create()
-    for color in cell_partition.colors do
-      var limits = cell_partition[color].bounds
-      var first_cell : int64 = limits.lo - 1
-      var last_cell : int64 = limits.hi + 1
-      if first_cell < 0 then
-        first_cell = 0
-      end
-      if last_cell >= num_cells then
-        last_cell = num_cells - 1
-      end
-      C.legion_domain_point_coloring_color_domain(coloring, [int1d](color), rect1d {first_cell,
-        last_cell})
-    end
-    var [bloated_partition] = partition(aliased, [cell_region], coloring, cell_partition.colors)
-  end
+  local bpart_declaration = declare_bloated_partition(bloated_partition, cell_partition,
+    cell_region, num_cells)
 
   local face_region = regentlib.newsymbol("level_" .. n .. "_face_region")
   local num_faces = num_cells + num_partitions
