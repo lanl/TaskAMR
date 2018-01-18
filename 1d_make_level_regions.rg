@@ -101,3 +101,59 @@ function make_level_regions(n, num_partitions)
 
 end
 
+function declare_level_regions(meta_region_for_level,
+                               cell_region_for_level,
+                               face_region_for_level,
+                               meta_partition_for_level,
+                               cell_partition_for_level,
+                               face_partition_for_level,
+                               bloated_partition_for_level,
+                               bloated_meta_partition_for_level,
+                               MAX_REFINEMENT_LEVEL,
+                               NUM_PARTITIONS)
+  -- array of region and partition declarations
+  local declarations = terralib.newlist()
+
+  for n = 1, MAX_REFINEMENT_LEVEL do
+    local cell_region, declare_cells, face_region, declare_faces, cell_partition, declare_cpart,
+      face_partition, declare_fpart, bloated_partition, declare_bpart, meta_region,
+      declare_meta, meta_partition, declare_mpart, bmeta_partition, declare_bmpart
+      = make_level_regions(n, NUM_PARTITIONS)
+    meta_region_for_level:insert(meta_region)
+    declarations:insert(declare_meta)
+    meta_partition_for_level:insert(meta_partition)
+    declarations:insert(declare_mpart)
+    cell_region_for_level:insert(cell_region)
+    declarations:insert(declare_cells)
+    face_region_for_level:insert(face_region)
+    declarations:insert(declare_faces)
+    cell_partition_for_level:insert(cell_partition)
+    declarations:insert(declare_cpart)
+    face_partition_for_level:insert(face_partition)
+    declarations:insert(declare_fpart)
+    bloated_partition_for_level:insert(bloated_partition)
+    declarations:insert(declare_bpart)
+    bloated_meta_partition_for_level:insert(bmeta_partition)
+    declarations:insert(declare_bmpart)
+  end
+
+  return declarations
+end
+
+function init_num_cells_levels(num_cells,
+                               MAX_REFINEMENT_LEVEL,
+                               cell_region_for_level)
+
+  local init_num_cells = terralib.newlist()
+  init_num_cells:insert(rquote var [num_cells] end)
+  for n = 1, MAX_REFINEMENT_LEVEL do
+    init_num_cells:insert(rquote
+      var limits = [cell_region_for_level[n]].ispace.bounds
+      var  total : int64 = limits.hi - limits.lo + 1
+      [num_cells][n] = total
+    end)
+  end
+
+  return init_num_cells
+end
+
