@@ -28,14 +28,18 @@ task initializeCells(num_cells : int64,
 where
   writes(cell_region.phi)
 do
+  C.printf("initializeCells %d cells\n", num_cells)
   for cell in cell_region.ispace do
+    C.printf("%d:", cell)
     if [int64](cell) < (num_cells/2) then
       cell_region[cell].phi = 1.0
+      C.printf("1 ")
     else
       cell_region[cell].phi = 0.0
+      C.printf("0 ")
     end
   end
-  C.printf("initializeCells %d cells\n", num_cells)
+  C.printf("\n")
 end -- initializeCells
 
 

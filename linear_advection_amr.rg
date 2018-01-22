@@ -74,6 +74,7 @@ do
       if MATH.fabs(faces[face].grad) > MAX_GRAD then
         blocks[block].needsRefinement = true
         needs_regrid = 1
+        C.printf("block %d <= %d < %d REFINE\n", start_block, block, stop_block)
       end
     end -- for face
   end -- for block
@@ -158,25 +159,102 @@ task right_child(block : int64)
 end
 
 
+__demand(__inline)
+task left(block : int64)
+  return block - 1
+end
+
+
+__demand(__inline)
+task right(block : int64)
+  return block + 1
+end
+
+
+task smoothGrid(blocks: region(ispace(int1d), RefinementBits))
+where
+  reads (blocks.cascadeRefinement),
+  writes (blocks.{needsRefinement,
+                  cascadeRefinement})
+do
+  for block in blocks do
+    if blocks[block].cascadeRefinement then
+      blocks[block].needsRefinement = true
+      blocks[block].cascadeRefinement = false
+      C.printf("block %d needsRefine\n", block)
+    end
+  end
+end -- smoothGrid
+
+
 task updateRefinementBits(num_blocks: int64,
                           blocks: region(ispace(int1d), RefinementBits),
                           ghosts: region(ispace(int1d), RefinementBits),
-                          children: region(ispace(int1d), RefinementBits))
+                          children: region(ispace(int1d), RefinementBits),
+                          ghost_children: region(ispace(int1d), RefinementBits))
 where
   reads (ghosts.needsRefinement),
-  reads (blocks.isActive),
-  writes (blocks.{isActive,
+  reads (ghost_children.{needsRefinement,
+                         isRefined}),
+  reads writes (blocks.{isActive,
                   isRefined,
+                  cascadeRefinement,
                   plusXMoreRefined,
                   minusXMoreRefined,
                   plusXMoreCoarse,
                   minusXMoreCoarse}),
   writes (children.isActive)
 do
+  var needs_regrid : int64 = 0
+
   var start_block : int64 = blocks.ispace.bounds.lo
   var stop_block : int64 = blocks.ispace.bounds.hi + 1
 
   for block = start_block, stop_block do
+    C.printf("block: %d <= %d < %d\n", start_block, block, stop_block)
+    var left_refinement_delta : int64
+
+    if block == 0 then
+      blocks[block].minusXMoreCoarse = false
+      blocks[block].minusXMoreRefined = false
+    else
+      if ghost_children[right_child(left(block))].needsRefinement then
+        left_refinement_delta = 2
+      elseif ghost_children[right_child(left(block))].isRefined then
+        left_refinement_delta = 2
+      elseif blocks[block].minusXMoreRefined then
+        left_refinement_delta = 1
+      elseif ghosts[left(block)].needsRefinement then
+        left_refinement_delta = 1
+      elseif blocks[block].minusXMoreCoarse then
+        left_refinement_delta = -1
+      else
+        left_refinement_delta = 0
+      end
+    end -- left boundary
+
+    var right_refinement_delta : int64
+
+    if block == (num_blocks -1 ) then
+      blocks[block].plusXMoreCoarse = false
+      blocks[block].plusXMoreRefined = false
+    else
+      if ghost_children[left_child(right(block))].needsRefinement then
+        right_refinement_delta = 2
+      elseif ghost_children[left_child(right(block))].isRefined then
+        right_refinement_delta = 2
+      elseif blocks[block].plusXMoreRefined then
+        right_refinement_delta = 1
+      elseif ghosts[right(block)].needsRefinement then
+        right_refinement_delta = 1
+      elseif blocks[block].plusXMoreCoarse then
+        right_refinement_delta = -1
+      else
+        right_refinement_delta = 0
+      end
+    end -- right boundary
+
+    var my_refinement_delta : int64
 
     if ghosts[block].needsRefinement then
 
@@ -184,83 +262,59 @@ do
       blocks[block].isActive = false
       children[left_child(block)].isActive = true
       children[right_child(block)].isActive = true
+      my_refinement_delta = 1
+      C.printf("refine\n");
 
-      if block == 0 then
+    elseif blocks[block].isActive then
 
-        blocks[block].minusXMoreCoarse = false
-        blocks[block].minusXMoreRefined = false
+      blocks[block].isRefined = false
+      my_refinement_delta = 0
 
-      else
+    end -- needsRefinement or isActive
 
-        if ghosts[block-1].needsRefinement then
+    if ghosts[block].needsRefinement or blocks[block].isActive then
+      if not (block == 0) then
+        if left_refinement_delta > my_refinement_delta then
+          blocks[block].minusXMoreCoarse = false
+          blocks[block].minusXMoreRefined = true
+        elseif left_refinement_delta == my_refinement_delta then
           blocks[block].minusXMoreCoarse = false
           blocks[block].minusXMoreRefined = false
         else
           blocks[block].minusXMoreCoarse = true
           blocks[block].minusXMoreRefined = false
         end
-
+        C.printf("left delta %d\n", left_refinement_delta - my_refinement_delta)
+        if (left_refinement_delta - my_refinement_delta) > 1 then
+          blocks[block].cascadeRefinement = true
+          needs_regrid = 1
+          C.printf("cascade\n")
+        end
       end -- not block 0
 
-      if block == (num_blocks -1 ) then
-
-        blocks[block].plusXMoreCoarse = false
-        blocks[block].plusXMoreRefined = false
-
-      else
-
-        if ghosts[block+1].needsRefinement then
+      if not (block == (num_blocks-1)) then
+        if right_refinement_delta > my_refinement_delta then
+          blocks[block].plusXMoreCoarse = false
+          blocks[block].plusXMoreRefined = true
+        elseif right_refinement_delta == my_refinement_delta then
           blocks[block].plusXMoreCoarse = false
           blocks[block].plusXMoreRefined = false
         else
           blocks[block].plusXMoreCoarse = true
           blocks[block].plusXMoreRefined = false
         end
-
-      end -- not last block
-
-    elseif blocks[block].isActive then
-
-      blocks[block].isRefined = false
-
-      if block == 0 then
-
-        blocks[block].minusXMoreCoarse = false
-        blocks[block].minusXMoreRefined = false
-
-      else
-
-        if ghosts[block-1].needsRefinement then
-          blocks[block].minusXMoreCoarse = false
-          blocks[block].minusXMoreRefined = true
-        else
-          blocks[block].minusXMoreCoarse = false
-          blocks[block].minusXMoreRefined = false
+        C.printf("right delta %d\n", right_refinement_delta - my_refinement_delta)
+        if (right_refinement_delta - my_refinement_delta) > 1 then
+          blocks[block].cascadeRefinement = true
+          needs_regrid = 1
+          C.printf("cascade\n")
         end
-
-      end -- not block 0
-
-      if block == (num_blocks -1 ) then
-
-        blocks[block].plusXMoreCoarse = false
-        blocks[block].plusXMoreRefined = false
-
-      else
-
-        if ghosts[block+1].needsRefinement then
-          blocks[block].plusXMoreCoarse = false
-          blocks[block].plusXMoreRefined = true
-        else
-          blocks[block].plusXMoreCoarse = false
-          blocks[block].plusXMoreRefined = false
-        end
-
       end -- not last block
-
-    end -- not needsRefinement and isActive
+    end -- needsRefinement or isActive
 
   end -- block
 
+  return needs_regrid
 end -- updateRefinementBits
 
 

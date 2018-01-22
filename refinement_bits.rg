@@ -7,6 +7,7 @@ fspace RefinementBits
   isActive: bool,
   isRefined: bool,
   needsRefinement: bool,
+  cascadeRefinement: bool,
   wantsCoarsening: bool,
   plusXMoreRefined: bool,
   minusXMoreRefined: bool,

@@ -22,6 +22,7 @@ function make_top_level_task()
   local bloated_meta_partition_for_level = terralib.newlist()
   local parent_cell_partition_for_level = terralib.newlist()
   local parent_meta_partition_for_level = terralib.newlist()
+  local bloated_parent_meta_partition_for_level = terralib.newlist()
 
   -- array of region and partition declarations
   local declarations = declare_level_regions(meta_region_for_level,
@@ -34,16 +35,6 @@ function make_top_level_task()
                                              bloated_meta_partition_for_level,
                                              MAX_REFINEMENT_LEVEL,
                                              NUM_PARTITIONS)
-
-  insert_parent_partitions(parent_cell_partition_for_level,
-                           parent_meta_partition_for_level)
-
-  local init_parent_partitions = initialize_parent_partitions(cell_partition_for_level,
-                                                              cell_region_for_level,
-                                                              parent_cell_partition_for_level,
-                                                              meta_partition_for_level,
-                                                              meta_region_for_level,
-                                                              parent_meta_partition_for_level)
 
   -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
@@ -58,8 +49,33 @@ function make_top_level_task()
   local write_cells = make_write_cells(num_cells,
                                        meta_partition_for_level,
                                        cell_partition_for_level)
+  insert_parent_partitions(parent_cell_partition_for_level,
+                           parent_meta_partition_for_level,
+                           bloated_parent_meta_partition_for_level)
 
-  local init_grid_and_values = make_init_grid_and_values(num_cells,
+  local init_parent_partitions = initialize_parent_partitions(cell_partition_for_level,
+                                                              cell_region_for_level,
+                                                              parent_cell_partition_for_level,
+                                                              meta_partition_for_level,
+                                                              meta_region_for_level,
+                                                              parent_meta_partition_for_level,
+                                                              bloated_parent_meta_partition_for_level,
+                                                              num_cells)
+
+  local init_regrid_and_values = make_init_regrid_and_values(num_cells,
+                                                             dx,
+                                                             cell_region_for_level,
+                                                             cell_partition_for_level,
+                                                             bloated_partition_for_level,
+                                                             face_partition_for_level,
+                                                             meta_partition_for_level,
+                                                             parent_cell_partition_for_level,
+                                                             bloated_meta_partition_for_level,
+                                                             parent_meta_partition_for_level,
+                                                             bloated_parent_meta_partition_for_level,
+                                                             meta_region_for_level)
+
+  local init_grid_refinement = make_init_grid_refinement(num_cells,
                                                          dx,
                                                          cell_region_for_level,
                                                          cell_partition_for_level,
@@ -69,6 +85,7 @@ function make_top_level_task()
                                                          parent_cell_partition_for_level,
                                                          bloated_meta_partition_for_level,
                                                          parent_meta_partition_for_level,
+                                                         bloated_parent_meta_partition_for_level,
                                                          meta_region_for_level)
 
   -- top_level task using previous meta programming
@@ -83,7 +100,8 @@ function make_top_level_task()
       C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], [dx][level])
     end
 
-    [init_grid_and_values];
+    [init_regrid_and_values];
+    [init_grid_refinement];
 
     --var time : double = 0.0
     --while time < T_FINAL - DT do 
