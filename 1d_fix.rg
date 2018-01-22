@@ -49,7 +49,12 @@ function make_top_level_task()
       C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], [dx][level])
     end
 
-    initializeCells([num_cells][MAX_REFINEMENT_LEVEL], [cell_region_for_level[MAX_REFINEMENT_LEVEL]])
+    __demand(__parallel)
+    for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
+      initializeCells([num_cells][MAX_REFINEMENT_LEVEL],
+                      [cell_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
+    end
+
     var time : double = 0.0
     while time < T_FINAL - DT do
 
