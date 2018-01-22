@@ -43,7 +43,8 @@ fspace FaceValues
 
 -- model specific tasks
 
-task initializeCells(cell_region: region(ispace(int1d), CellValues))
+task initializeCells(num_cells : int64,
+                     cell_region: region(ispace(int1d), CellValues))
 where
   writes(cell_region.{density,
                       velocity,
@@ -51,10 +52,9 @@ where
                       pressure,
                       energy})
 do
-  var size : int64 = cell_region.ispace.bounds.hi - cell_region.ispace.bounds.lo + 1
   for cell in cell_region.ispace do
     var P : double
-    if [int64](cell) < (size/2) then
+    if [int64](cell) < (num_cells/2) then
       P = P_L
       cell_region[cell].density = RHO_L
       cell_region[cell].velocity = V_L
@@ -69,7 +69,7 @@ do
     -- this should be meta-programmed
     cell_region[cell].energy = P / (GAMMA - 1.0)
   end
-  C.printf("initializeCells %d cells\n", size)
+  C.printf("initializeCells %d cells\n", num_cells)
 end
 
 -- hard coded euler with Lax-Friedrichs for now, metaprog soon

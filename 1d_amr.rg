@@ -4,6 +4,7 @@ local C = regentlib.c
 
 -- implement all required model APIs and link model.rg to your file
 require("model")
+require("model_amr")
 require("1d_make_level_regions")
 
 -- meta programming to create top_level_task
@@ -68,7 +69,7 @@ function make_top_level_task()
     end
 
     [init_activity];
-    initializeCells([cell_region_for_level[1]])
+    initializeCells([num_cells][1], [cell_region_for_level[1]])
 
     __demand(__parallel)
     for color in [cell_partition_for_level[1]].colors do
