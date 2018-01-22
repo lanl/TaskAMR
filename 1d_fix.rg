@@ -33,18 +33,20 @@ function make_top_level_task()
 
   -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
-  local init_num_cells = make_init_num_cells(num_cells, MAX_REFINEMENT_LEVEL,
-                                               cell_region_for_level)
+  local dx = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "dx")
+  local init_num_cells = make_init_num_cells(num_cells,
+                                             dx,
+                                             MAX_REFINEMENT_LEVEL,
+                                             cell_region_for_level)
 
   -- top_level task using previous meta programming
   local task top_level()
     [declarations];
     [init_num_cells];
 
-    var dx : double[MAX_REFINEMENT_LEVEL + 1]
     for level = 1, MAX_REFINEMENT_LEVEL + 1 do
-      dx[level] = LENGTH_X / [double]([num_cells][level])
-      C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], dx[level])
+      [dx][level] = LENGTH_X / [double]([num_cells][level])
+      C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], [dx][level])
     end
 
     initializeCells([num_cells][MAX_REFINEMENT_LEVEL], [cell_region_for_level[MAX_REFINEMENT_LEVEL]])
@@ -53,14 +55,14 @@ function make_top_level_task()
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
-        calculateFlux(num_cells[MAX_REFINEMENT_LEVEL], dx[MAX_REFINEMENT_LEVEL], DT,
+        calculateFlux(num_cells[MAX_REFINEMENT_LEVEL], [dx][MAX_REFINEMENT_LEVEL], DT,
         [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
         [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
-          applyFlux(dx[MAX_REFINEMENT_LEVEL], DT,
+          applyFlux([dx][MAX_REFINEMENT_LEVEL], DT,
           [cell_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
           [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end

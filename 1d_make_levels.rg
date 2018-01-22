@@ -143,11 +143,13 @@ end  -- declare_level_regions
 
 
 function make_init_num_cells(num_cells,
+                             dx,
                              MAX_REFINEMENT_LEVEL,
                              cell_region_for_level)
 
   local init_num_cells = terralib.newlist()
   init_num_cells:insert(rquote var [num_cells] end)
+  init_num_cells:insert(rquote var [dx] end)
   for n = 1, MAX_REFINEMENT_LEVEL do
     init_num_cells:insert(rquote
       var limits = [cell_region_for_level[n]].ispace.bounds

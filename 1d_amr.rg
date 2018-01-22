@@ -47,8 +47,11 @@ function make_top_level_task()
 
   -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
-  local init_num_cells = make_init_num_cells(num_cells, MAX_REFINEMENT_LEVEL,
-                                               cell_region_for_level)
+  local dx = regentlib.newsymbol(double[MAX_REFINEMENT_LEVEL+1], "dx")
+  local init_num_cells = make_init_num_cells(num_cells,
+                                             dx,
+                                             MAX_REFINEMENT_LEVEL,
+                                             cell_region_for_level)
 
   local init_activity = make_init_activity(meta_region_for_level)
 
@@ -56,58 +59,31 @@ function make_top_level_task()
                                        meta_partition_for_level,
                                        cell_partition_for_level)
 
+  local init_grid_and_values = make_init_grid_and_values(num_cells,
+                                                         dx,
+                                                         cell_region_for_level,
+                                                         cell_partition_for_level,
+                                                         bloated_partition_for_level,
+                                                         face_partition_for_level,
+                                                         meta_partition_for_level,
+                                                         parent_cell_partition_for_level,
+                                                         bloated_meta_partition_for_level,
+                                                         parent_meta_partition_for_level,
+                                                         meta_region_for_level)
+
   -- top_level task using previous meta programming
   local task top_level()
     [declarations];
     [init_num_cells];
     [init_parent_partitions];
-
-    var dx : double[MAX_REFINEMENT_LEVEL + 1]
-    for level = 1, MAX_REFINEMENT_LEVEL + 1 do
-      dx[level] = LENGTH_X / [double]([num_cells][level])
-      C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], dx[level])
-    end
-
     [init_activity];
-    initializeCells([num_cells][1], [cell_region_for_level[1]])
 
-    __demand(__parallel)
-    for color in [cell_partition_for_level[1]].colors do
-      calculateGradient(num_cells[1], dx[1], [bloated_partition_for_level[1]][color],
-                        [face_partition_for_level[1]][color])
+    for level = 1, MAX_REFINEMENT_LEVEL + 1 do
+      [dx][level] = LENGTH_X / [double]([num_cells][level])
+      C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], [dx][level])
     end
 
-    __demand(__parallel)
-    for color in [cell_partition_for_level[1]].colors do
-      printFaces([face_partition_for_level[1]][color])
-    end
-
-    var needs_regrid = 0
-    __demand(__parallel)
-    for color in [cell_partition_for_level[1]].colors do
-      needs_regrid += flagRegrid([meta_partition_for_level[1]][color],
-                                 [face_partition_for_level[1]][color])
-    end
-    C.printf("Needs regrid = %d\n", needs_regrid)
-
-    if needs_regrid > 0 then
-
-      __demand(__parallel)
-      for color in [cell_partition_for_level[1]].colors do
-        interpolateToChildren(num_cells[2], [meta_partition_for_level[1]][color],
-                              [bloated_partition_for_level[1]][color],
-                              [parent_cell_partition_for_level[2]][color])
-      end
-
-      __demand(__parallel)
-      for color in [meta_partition_for_level[1]].colors do
-        updateRefinementBits(num_cells[1]/CELLS_PER_BLOCK_X, [meta_partition_for_level[1]][color],
-                             [bloated_meta_partition_for_level[1]][color],
-                             [parent_meta_partition_for_level[2]][color])
-      end
-      fill([meta_region_for_level[1]].needsRefinement, false)
-
-    end -- needs_regrid
+    [init_grid_and_values];
 
     --var time : double = 0.0
     --while time < T_FINAL - DT do 
