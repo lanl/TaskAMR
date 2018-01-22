@@ -4,7 +4,7 @@ local C = regentlib.c
 
 -- implement all required model APIs and link model.rg to your file
 require("model")
-require("1d_make_level_regions")
+require("1d_make_levels")
 
 -- meta programming to create top_level_task
 function make_top_level_task()
@@ -33,7 +33,7 @@ function make_top_level_task()
 
   -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
-  local init_num_cells = init_num_cells_levels(num_cells, MAX_REFINEMENT_LEVEL,
+  local init_num_cells = make_init_num_cells(num_cells, MAX_REFINEMENT_LEVEL,
                                                cell_region_for_level)
 
   -- top_level task using previous meta programming

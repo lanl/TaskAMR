@@ -99,7 +99,8 @@ function make_level_regions(n, num_partitions)
     meta_region, meta_declaration, meta_partition, mpart_declaration, bloated_meta_partition,
     bmeta_declaration
 
-end
+end -- make_level_regions
+
 
 function declare_level_regions(meta_region_for_level,
                                cell_region_for_level,
@@ -138,11 +139,12 @@ function declare_level_regions(meta_region_for_level,
   end
 
   return declarations
-end
+end  -- declare_level_regions
 
-function init_num_cells_levels(num_cells,
-                               MAX_REFINEMENT_LEVEL,
-                               cell_region_for_level)
+
+function make_init_num_cells(num_cells,
+                             MAX_REFINEMENT_LEVEL,
+                             cell_region_for_level)
 
   local init_num_cells = terralib.newlist()
   init_num_cells:insert(rquote var [num_cells] end)
@@ -155,5 +157,5 @@ function init_num_cells_levels(num_cells,
   end
 
   return init_num_cells
-end
+end  -- make_init_num_cells
 
