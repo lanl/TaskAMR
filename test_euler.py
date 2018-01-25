@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import numpy as np
 import subprocess
 import sys
 from analyze_euler import measure_error
@@ -21,7 +22,7 @@ def test_single_resolution(refinement_level, filename, threshold, descriptor):
     set_refinement_level(refinement_level)
     subprocess.check_call(["../../github/legion/language/regent.py","1d_fix.rg"], stdout=dev_null)
     L2, x, numeric, analytic = measure_error(filename)
-    if L2 > threshold:
+    if (L2 > threshold) or np.isnan(L2):
       print descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold
       ERROR = 1
     else:
