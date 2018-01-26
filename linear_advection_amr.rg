@@ -344,3 +344,13 @@ do
   C.free([&opaque](buf))
 end -- writeAMRCells
 
+
+task copyToChildren(blocks: region(ispace(int1d), RefinementBits),
+                    cells: region(ispace(int1d), CellValues),
+                    children: region(ispace(int1d), CellValues))
+where
+  reads(cells.phi),
+  reads(blocks.isActive),
+  writes(children.phi)
+do
+end -- copyToChildren

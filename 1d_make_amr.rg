@@ -132,17 +132,11 @@ end -- make_write_cells
 
 
 function make_init_regrid_and_values(num_cells,
-                                   dx,
-                                   cell_region_for_level,
-                                   cell_partition_for_level,
-                                   bloated_partition_for_level,
-                                   face_partition_for_level,
-                                   meta_partition_for_level,
-                                   parent_cell_partition_for_level,
-                                   bloated_meta_partition_for_level,
-                                   parent_meta_partition_for_level,
-                                   bloated_parent_meta_partition_for_level,
-                                   meta_region_for_level)
+                                     dx,
+                                     cell_partition_for_level,
+                                     bloated_partition_for_level,
+                                     face_partition_for_level,
+                                     meta_partition_for_level)
 
   local init_regrid_and_values = terralib.newlist()
 
@@ -181,17 +175,12 @@ end -- make_init_regrid_and_values
 
 
 function make_init_grid_refinement(num_cells,
-                              dx,
-                              cell_region_for_level,
-                              cell_partition_for_level,
-                              bloated_partition_for_level,
-                              face_partition_for_level,
-                              meta_partition_for_level,
-                              parent_cell_partition_for_level,
-                              bloated_meta_partition_for_level,
-                              parent_meta_partition_for_level,
-                              bloated_parent_meta_partition_for_level,
-                              meta_region_for_level)
+                                   cell_partition_for_level,
+                                   meta_partition_for_level,
+                                   bloated_meta_partition_for_level,
+                                   parent_meta_partition_for_level,
+                                   bloated_parent_meta_partition_for_level,
+                                   meta_region_for_level)
 
   local init_grid_refinement = terralib.newlist()
 
@@ -199,27 +188,25 @@ function make_init_grid_refinement(num_cells,
 
     for level = 1, max_level do
 
-    init_grid_refinement:insert(rquote
+      init_grid_refinement:insert(rquote
 
-      C.printf("level %d\n", level)
+        __demand(__parallel)
+        for color in [cell_partition_for_level[level]].colors do
+          updateRefinementBits(num_cells[level]/CELLS_PER_BLOCK_X,
+                               [meta_partition_for_level[level]][color],
+                               [bloated_meta_partition_for_level[level]][color],
+                               [parent_meta_partition_for_level[level+1]][color],
+                               [bloated_parent_meta_partition_for_level[level+1]][color])
+        end
 
-      __demand(__parallel)
-      for color in [cell_partition_for_level[level]].colors do
-        updateRefinementBits(num_cells[level]/CELLS_PER_BLOCK_X,
-                             [meta_partition_for_level[level]][color],
-                             [bloated_meta_partition_for_level[level]][color],
-                             [parent_meta_partition_for_level[level+1]][color],
-                             [bloated_parent_meta_partition_for_level[level+1]][color])
-      end
+        fill([meta_region_for_level[level]].needsRefinement, false)
 
-      fill([meta_region_for_level[level]].needsRefinement, false)
+        __demand(__parallel)
+        for color in [cell_partition_for_level[level]].colors do
+          smoothGrid([meta_partition_for_level[level]][color])
+        end
 
-      __demand(__parallel)
-      for color in [cell_partition_for_level[level]].colors do
-        smoothGrid([meta_partition_for_level[level]][color])
-      end
-
-    end)
+      end)
 
     end -- level
 
@@ -227,4 +214,29 @@ function make_init_grid_refinement(num_cells,
 
   return init_grid_refinement
 end -- make_init_grid_refinement
+
+
+function make_copy_to_children(cell_partition_for_level,
+                               meta_partition_for_level,
+                               parent_cell_partition_for_level)
+
+  local copy_to_children = terralib.newlist()
+
+  for level = 1, MAX_REFINEMENT_LEVEL - 1 do
+
+    copy_to_children:insert(rquote
+
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        copyToChildren([meta_partition_for_level[level]][color],
+                       [cell_partition_for_level[level]][color],
+                       [parent_cell_partition_for_level[level+1]][color])
+      end
+
+    end)
+
+  end -- level
+
+  return copy_to_children
+end -- make_copy_to_children
 

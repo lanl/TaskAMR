@@ -56,7 +56,7 @@ function make_top_level_task()
     end
 
     var time : double = 0.0
-    while time < T_FINAL - DT do
+    while time < DT do
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do

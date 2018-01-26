@@ -70,6 +70,7 @@ where
         faces.flux),
   writes(faces.flux)
 do
+  C.printf("calculateFlux %d cells\n", num_cells)
   var vel : double = U
   var left_boundary_face : int64 = faces.ispace.bounds.lo
   var right_boundary_face : int64 = faces.ispace.bounds.hi
@@ -95,6 +96,7 @@ do
     var right : double = cells[cell_index].phi
     var flux : double = 0.5 * vel * (left + right) +0.5 * dx * (left - right)/dt
     faces[face].flux = flux
+    C.printf("face %d, flux %f\n",face,flux)
   end
 
   -- boundary conditions: hold end cells constant in time
