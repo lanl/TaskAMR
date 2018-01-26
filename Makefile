@@ -9,5 +9,5 @@ spy:
 	../../github/legion/tools/legion_spy.py -dez spy0
 
 clean:  
-	rm -r prof* spy*
+	rm -r prof* spy* *txt
 

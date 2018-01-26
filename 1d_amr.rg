@@ -23,6 +23,7 @@ function make_top_level_task()
   local parent_cell_partition_for_level = terralib.newlist()
   local parent_meta_partition_for_level = terralib.newlist()
   local bloated_parent_meta_partition_for_level = terralib.newlist()
+  local bloated_cell_partition_by_parent_for_level = terralib.newlist()
 
   -- array of region and partition declarations
   local declarations = declare_level_regions(meta_region_for_level,
@@ -51,7 +52,8 @@ function make_top_level_task()
                                        cell_partition_for_level)
   insert_parent_partitions(parent_cell_partition_for_level,
                            parent_meta_partition_for_level,
-                           bloated_parent_meta_partition_for_level)
+                           bloated_parent_meta_partition_for_level,
+                           bloated_cell_partition_by_parent_for_level)
 
   local init_parent_partitions = initialize_parent_partitions(cell_partition_for_level,
                                                               cell_region_for_level,
@@ -60,6 +62,7 @@ function make_top_level_task()
                                                               meta_region_for_level,
                                                               parent_meta_partition_for_level,
                                                               bloated_parent_meta_partition_for_level,
+                                                              bloated_cell_partition_by_parent_for_level,
                                                               num_cells)
 
   local init_regrid_and_values = make_init_regrid_and_values(num_cells,
@@ -77,9 +80,12 @@ function make_top_level_task()
                                                          bloated_parent_meta_partition_for_level,
                                                          meta_region_for_level)
 
-  local copy_to_children = make_copy_to_children(cell_partition_for_level,
-                                                 meta_partition_for_level,
-                                                 parent_cell_partition_for_level)
+  local time_step = make_time_step(num_cells,
+                                   cell_partition_for_level,
+                                   meta_partition_for_level,
+                                   bloated_partition_for_level,
+                                   bloated_cell_partition_by_parent_for_level,
+                                   parent_cell_partition_for_level)
 
   -- top_level task using previous meta programming
   local task top_level()
@@ -96,10 +102,11 @@ function make_top_level_task()
     [init_regrid_and_values];
     [init_grid_refinement];
 
-    [copy_to_children];
-
     var time : double = 0.0
     while time < DT do 
+
+      [time_step];
+
       time += DT
       C.printf("time = %f\n",time)
     end

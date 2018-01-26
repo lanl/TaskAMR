@@ -19,7 +19,8 @@ DT = CFL * MIN_DX / U
 
 fspace CellValues
 {
-  phi : double
+  phi : double,
+  phi_copy : double
 }
 
 fspace FaceValues

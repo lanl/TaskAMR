@@ -12,19 +12,25 @@ function make_parent_partitions(n)
 
   local bloated_parent_meta_partition = regentlib.newsymbol("level_" .. n .. "_bloated_parent_meta_partition")
 
-  return parent_cell_partition, parent_meta_partition, bloated_parent_meta_partition
+  local bloated_cell_partition_by_parent = regentlib.newsymbol("level_" .. n .. "_bloated_cell_partition_by_parent")
+
+  return parent_cell_partition, parent_meta_partition, bloated_parent_meta_partition,
+    bloated_cell_partition_by_parent
 end -- make_parent_partitions
 
 
 function insert_parent_partitions(parent_cell_partitions,
                                   parent_meta_partitions,
-                                  bloated_parent_meta_partitions)
+                                  bloated_parent_meta_partitions,
+                                  bloated_cell_partitions_by_parent)
 
   for n = 1, MAX_REFINEMENT_LEVEL do
-    local cell_partition, meta_partition, bloated_meta_partition = make_parent_partitions(n)
+    local cell_partition, meta_partition, bloated_meta_partition, bloated_cell_partition
+      = make_parent_partitions(n)
     parent_cell_partitions:insert(cell_partition)
     parent_meta_partitions:insert(meta_partition)
     bloated_parent_meta_partitions:insert(bloated_meta_partition)
+    bloated_cell_partitions_by_parent:insert(bloated_cell_partition)
   end
 
 end -- insert_parent_partitions
@@ -37,6 +43,7 @@ function initialize_parent_partitions(cell_partition_for_level,
                                       meta_region_for_level,
                                       parent_meta_partition_for_level,
                                       bloated_parent_meta_partition_for_level,
+                                      bloated_cell_partition_by_parent_for_level,
                                       num_cells)
 
   local init_parent_partitions =  terralib.newlist()
@@ -89,7 +96,30 @@ function initialize_parent_partitions(cell_partition_for_level,
                                                                    bloated_coloring,
                                                                    [meta_partition_for_level[n-1]].colors)
 
+      bloated_coloring = C.legion_domain_point_coloring_create()
+
+      for color in [parent_cell_partition_for_level[n]].colors do
+        var limits = [parent_cell_partition_for_level[n]][color].bounds
+        var first_bloated : int64 = limits.lo - 1
+        var last_bloated : int64 = limits.hi + 1
+        if first_bloated < 0 then
+          first_bloated = 0
+        end
+        if last_bloated >= num_cells[n] then
+          last_bloated = num_cells[n] - 1
+        end
+        C.legion_domain_point_coloring_color_domain(bloated_coloring, [int1d](color),
+                                                    rect1d{first_bloated, last_bloated})
+      end -- color
+
+      var [bloated_cell_partition_by_parent_for_level[n]] = partition(aliased,
+                                                                      [cell_region_for_level[n]],
+                                                                      bloated_coloring,
+                                                             [cell_partition_for_level[n-1]].colors)
+
+
     end)
+
   end -- n
 
   return init_parent_partitions
@@ -216,15 +246,18 @@ function make_init_grid_refinement(num_cells,
 end -- make_init_grid_refinement
 
 
-function make_copy_to_children(cell_partition_for_level,
-                               meta_partition_for_level,
-                               parent_cell_partition_for_level)
+function make_time_step(num_cells,
+                        cell_partition_for_level,
+                        meta_partition_for_level,
+                        bloated_partition_for_level,
+                        bloated_cell_partition_by_parent_for_level,
+                        parent_cell_partition_for_level)
 
-  local copy_to_children = terralib.newlist()
+  local time_step = terralib.newlist()
 
   for level = 1, MAX_REFINEMENT_LEVEL - 1 do
 
-    copy_to_children:insert(rquote
+    time_step:insert(rquote
 
       __demand(__parallel)
       for color in [cell_partition_for_level[level]].colors do
@@ -237,6 +270,23 @@ function make_copy_to_children(cell_partition_for_level,
 
   end -- level
 
-  return copy_to_children
-end -- make_copy_to_children
+  for level = 1, MAX_REFINEMENT_LEVEL - 1 do
+
+    time_step:insert(rquote
+
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        interpolateToChildren(num_cells[level+1],
+                              [meta_partition_for_level[level]][color],
+                              [bloated_partition_for_level[level]][color],
+                              [bloated_cell_partition_by_parent_for_level[level+1]][color],
+                              [parent_cell_partition_for_level[level+1]][color])
+      end
+
+    end)
+
+  end -- level
+
+  return time_step
+end -- make_time_step
 

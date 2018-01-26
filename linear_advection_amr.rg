@@ -9,6 +9,58 @@ require("linear_constants")
 
 -- model specific tasks must implement following API:
 
+
+__demand(__inline)
+task parent_to_left(child : int64)
+  return (child - 1) / 2
+end
+
+
+__demand(__inline)
+task parent_to_right(child : int64)
+  return (child + 1) / 2
+end
+
+
+__demand(__inline)
+task parent_x(parent : int64)
+  return 2.0 * [double](parent) + 0.5
+end
+
+
+__demand(__inline)
+task left_child(block : int64)
+  return 2 * block
+end
+
+
+__demand(__inline)
+task right_child(block : int64)
+  return 2 * block + 1
+end
+
+
+__demand(__inline)
+task left(block : int64)
+  return block - 1
+end
+
+
+__demand(__inline)
+task right(block : int64)
+  return block + 1
+end
+
+
+__demand(__inline)
+task linear_interpolate(x : double,
+                        x0 : double,
+                        x1 : double,
+                        y0 : double,
+                        y1 : double)
+  return y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+end
+
 task calculateGradient(num_cells : int64,
                    dx : double,
                    cells: region(ispace(int1d), CellValues),
@@ -83,92 +135,96 @@ do
 end -- flagRegrid
 
 
-__demand(__inline)
-task parent_to_left(child : int64)
-  return (child - 1) / 2
-end
-
-
-__demand(__inline)
-task parent_to_right(child : int64)
-  return (child + 1) / 2
-end
-
-
-__demand(__inline)
-task linear_interpolate(x : double,
-                        x0 : double,
-                        x1 : double,
-                        y0 : double,
-                        y1 : double)
-  return y0 + (x - x0) * (y1 - y0) / (x1 - x0)
-end
-
-
 task interpolateToChildren(num_children: int64,
                            blocks: region(ispace(int1d), RefinementBits),
-                           parents: region(ispace(int1d), CellValues),
+                           ghost_parents: region(ispace(int1d), CellValues),
+                           ghost_children: region(ispace(int1d), CellValues),
                            children: region(ispace(int1d), CellValues))
 where
-  reads (blocks.needsRefinement),
-  reads (parents.phi),
-  reads writes (children.phi)
+  reads (blocks.{isActive,
+                 minusXMoreRefined,
+                 minusXMoreCoarse,
+                 plusXMoreRefined,
+                 plusXMoreCoarse}),
+  reads (ghost_parents.phi_copy),
+  reads (ghost_children.phi_copy),
+  writes (children.phi)
 do
   var first_child : int64 = children.ispace.bounds.lo
+  var last_child : int64 = children.ispace.bounds.lo
   var first_block : int64 = blocks.ispace.bounds.lo
 
   for block in blocks do
-    if blocks[block].needsRefinement then
+    if blocks[block].isActive then
       var start_child : int64 = first_child +  2 * CELLS_PER_BLOCK_X * (block - first_block)
       var stop_child : int64 = start_child + 2 * CELLS_PER_BLOCK_X
 
       if start_child == 0 then
-        children[0].phi = parents[0].phi
+        children[0].phi = ghost_parents[0].phi_copy
         start_child += 1
       end
 
       if stop_child == num_children then
         stop_child -= 1
-        children[stop_child].phi = parents[parent_to_left(stop_child)].phi
+        children[stop_child].phi = ghost_parents[parent_to_left(stop_child)].phi_copy
+      end
+
+      var left_phi : double
+      var left_x : double
+      var right_phi : double
+      var right_x : double
+
+      if start_child == first_child
+        and (blocks[block].minusXMoreRefined or blocks[block].minusXMoreCoarse) then
+
+        if blocks[block].minusXMoreRefined then
+          left_x = [double](left(start_child)) 
+        elseif blocks[block].minusXMoreCoarse then
+          left_x = parent_x(parent_to_left(start_child))
+        end
+
+        left_phi = ghost_children[left(start_child)].phi_copy
+        right_x = parent_x(parent_to_right(start_child))
+        right_phi = ghost_parents[parent_to_right(start_child)].phi_copy
+
+        children[start_child].phi = linear_interpolate([double](start_child), left_x, right_x,
+                                                       left_phi, right_phi)
+        start_child += 1
+
+      end
+
+      if stop_child == (last_child + 1)
+        and (blocks[block].plusXMoreRefined or blocks[block].plusXMoreCoarse) then
+
+        if blocks[block].plusXMoreRefined then
+          right_x = [double](right(stop_child)) 
+        elseif blocks[block].plusXMoreCoarse then
+          right_x = parent_x(parent_to_right(stop_child))
+        end
+
+        right_phi = ghost_children[right(stop_child)].phi_copy
+        left_x = parent_x(parent_to_left(stop_child))
+        left_phi = ghost_parents[parent_to_left(stop_child)].phi_copy
+
+        stop_child -= 1
+        children[stop_child].phi = linear_interpolate([double](stop_child), left_x, right_x,
+                                                      left_phi, right_phi)
+
       end
 
       for child = start_child, stop_child do
-        var left_parent : int64 = parent_to_left(child)
-        var right_parent : int64 = parent_to_right(child)
-        var left_parent_x : double = 2.0 * [double](left_parent) + 0.5
-        var right_parent_x : double = 2.0 * [double](right_parent) + 0.5
-        children[child].phi = linear_interpolate([double](child), left_parent_x, right_parent_x,
-                                                 parents[left_parent].phi, parents[right_parent].phi)
+        left_x = parent_x(parent_to_left(child))
+        left_phi = ghost_parents[parent_to_left(child)].phi_copy
+        right_x = parent_x(parent_to_right(child))
+        right_phi = ghost_parents[parent_to_right(child)].phi_copy
+        children[child].phi = linear_interpolate([double](child), left_x, right_x,
+                                                 left_phi, right_phi)
       end
 
-    end -- needsRefinement
+    end -- isActive
   end -- block
 
 end -- interpolateToChildren
-
-
-__demand(__inline)
-task left_child(block : int64)
-  return 2 * block
-end
-
-
-__demand(__inline)
-task right_child(block : int64)
-  return 2 * block + 1
-end
-
-
-__demand(__inline)
-task left(block : int64)
-  return block - 1
-end
-
-
-__demand(__inline)
-task right(block : int64)
-  return block + 1
-end
 
 
 task smoothGrid(blocks: region(ispace(int1d), RefinementBits))
@@ -351,6 +407,22 @@ task copyToChildren(blocks: region(ispace(int1d), RefinementBits),
 where
   reads(cells.phi),
   reads(blocks.isActive),
-  writes(children.phi)
+  writes(cells.phi_copy),
+  writes(children.phi_copy)
 do
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+  for block = start_block, stop_block do
+    if blocks[block].isActive then
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X
+      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X
+      for cell = start_cell, stop_cell do
+        cells[cell].phi_copy = cells[cell].phi
+        children[left_child(cell)].phi_copy = cells[cell].phi
+        children[right_child(cell)].phi_copy = cells[cell].phi
+        C.printf("block %d parent %d children %d and %d: %f\n", block, cell, left_child(cell),
+                 right_child(cell), cells[cell].phi)
+      end
+    end -- is Active
+  end -- block
 end -- copyToChildren
