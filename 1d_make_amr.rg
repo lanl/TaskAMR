@@ -187,11 +187,6 @@ function make_init_regrid_and_values(num_cells,
 
       __demand(__parallel)
       for color in [cell_partition_for_level[level]].colors do
-        printFaces([face_partition_for_level[level]][color])
-      end
-
-      __demand(__parallel)
-      for color in [cell_partition_for_level[level]].colors do
         flagRegrid([meta_partition_for_level[level]][color],
                                    [face_partition_for_level[level]][color])
       end
@@ -247,6 +242,9 @@ end -- make_init_grid_refinement
 
 
 function make_time_step(num_cells,
+                        dx,
+                        cell_region_for_level,
+                        face_partition_for_level,
                         cell_partition_for_level,
                         meta_partition_for_level,
                         bloated_partition_for_level,
@@ -254,6 +252,12 @@ function make_time_step(num_cells,
                         parent_cell_partition_for_level)
 
   local time_step = terralib.newlist()
+
+  -- interpolateToChildren works from phi_copy not phi or __demand(__parallel) fails
+  time_step:insert(rquote
+    copy([cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi,
+         [cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi_copy)
+  end)
 
   for level = 1, MAX_REFINEMENT_LEVEL - 1 do
 
@@ -281,6 +285,24 @@ function make_time_step(num_cells,
                               [bloated_partition_for_level[level]][color],
                               [bloated_cell_partition_by_parent_for_level[level+1]][color],
                               [parent_cell_partition_for_level[level+1]][color])
+      end
+
+    end)
+
+  end -- level
+
+  for level = 1, MAX_REFINEMENT_LEVEL do
+
+    time_step:insert(rquote
+
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        calculateFlux(num_cells[level],
+                      dx[level],
+                      DT,
+                      [meta_partition_for_level[level]][color],
+                      [bloated_partition_for_level[level]][color],
+                      [face_partition_for_level[level]][color])
       end
 
     end)

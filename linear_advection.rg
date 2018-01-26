@@ -28,18 +28,13 @@ task initializeCells(num_cells : int64,
 where
   writes(cell_region.phi)
 do
-  C.printf("initializeCells %d cells\n", num_cells)
   for cell in cell_region.ispace do
-    C.printf("%d:", cell)
     if [int64](cell) < (num_cells/2) then
       cell_region[cell].phi = 1.0
-      C.printf("1 ")
     else
       cell_region[cell].phi = 0.0
-      C.printf("0 ")
     end
   end
-  C.printf("\n")
 end -- initializeCells
 
 
@@ -63,49 +58,56 @@ end -- applyFlux
 task calculateFlux(num_cells : int64,
                    dx : double,
                    dt : double,
-                   cells: region(ispace(int1d), CellValues),
+                   blocks: region(ispace(int1d), RefinementBits),
+                   bloated_cells: region(ispace(int1d), CellValues),
                    faces: region(ispace(int1d), FaceValues))
 where
-  reads(cells.phi,
+  reads(bloated_cells.phi,
+        blocks.isActive,
         faces.flux),
   writes(faces.flux)
 do
-  C.printf("calculateFlux %d cells\n", num_cells)
   var vel : double = U
-  var left_boundary_face : int64 = faces.ispace.bounds.lo
-  var right_boundary_face : int64 = faces.ispace.bounds.hi
 
-  var left_boundary_cell : int64 = cells.ispace.bounds.lo
-  var right_boundary_cell : int64 = cells.ispace.bounds.hi
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+  var first_face : int64 = faces.ispace.bounds.lo
 
-  var start_face : int64 = left_boundary_face
-  var stop_face : int64 = right_boundary_face + 1
+  for block = start_block, stop_block do
+    if blocks[block].isActive then
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X - 1
+      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X + 1
+      var start_face : int64 = first_face + (block - start_block) * CELLS_PER_BLOCK_X
+      var stop_face : int64 = start_face + CELLS_PER_BLOCK_X + 1
 
-  if left_boundary_cell == 0 then
-    start_face  = start_face + 1
-  end
-  if right_boundary_cell == (num_cells - 1) then
-    stop_face  = stop_face - 1
-  end
+      if start_cell == - 1 then
+        start_face += 1
+        start_cell += 1
+      end
+      if stop_cell > num_cells then
+        stop_face -= 1
+      end
+  
+      var cell_index : int64 = start_cell
+      for face = start_face, stop_face do
+        var left : double = bloated_cells[cell_index].phi
+        cell_index = cell_index + 1
+        var right : double = bloated_cells[cell_index].phi
+        var flux : double = 0.5 * vel * (left + right) +0.5 * dx * (left - right)/dt
+        faces[face].flux = flux
+      end -- face
 
-  -- loop on inner faces
-  var cell_index : int64 = left_boundary_cell
-  for face = start_face, stop_face do
-    var left : double = cells[cell_index].phi
-    cell_index = cell_index + 1
-    var right : double = cells[cell_index].phi
-    var flux : double = 0.5 * vel * (left + right) +0.5 * dx * (left - right)/dt
-    faces[face].flux = flux
-    C.printf("face %d, flux %f\n",face,flux)
-  end
+      -- boundary conditions: hold end cells constant in time
+      if start_cell == 0 then
+        faces[0].flux = faces[1].flux
+      end
+      if stop_cell > num_cells then
+        faces[stop_face].flux = faces[stop_face-1].flux
+      end
 
-  -- boundary conditions: hold end cells constant in time
-  if left_boundary_cell == 0 then
-    faces[0].flux = faces[1].flux
-  end
-  if right_boundary_cell == (num_cells - 1) then
-    faces[right_boundary_face].flux = faces[right_boundary_face-1].flux
-  end
+    end -- isActive
+  end -- block
+
 end --calculateFlux
 
 

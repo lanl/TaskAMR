@@ -81,6 +81,9 @@ function make_top_level_task()
                                                          meta_region_for_level)
 
   local time_step = make_time_step(num_cells,
+                                   dx,
+                                   cell_region_for_level,
+                                   face_partition_for_level,
                                    cell_partition_for_level,
                                    meta_partition_for_level,
                                    bloated_partition_for_level,

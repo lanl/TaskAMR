@@ -4,6 +4,7 @@ import "regent"
 local C = regentlib.c
 
 require("global_const")
+require("refinement_bits")
 
 -- model specific local constants
 local MAX_NX = 3200
@@ -111,6 +112,7 @@ end
 task calculateFlux(num_cells : int64,
                    dx : double,
                    dt : double,
+                   blocks: region(ispace(int1d), RefinementBits),
                    cells: region(ispace(int1d), CellValues),
                    faces: region(ispace(int1d), FaceValues))
 where

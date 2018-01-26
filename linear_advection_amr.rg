@@ -126,7 +126,6 @@ do
       if MATH.fabs(faces[face].grad) > MAX_GRAD then
         blocks[block].needsRefinement = true
         needs_regrid = 1
-        C.printf("block %d <= %d < %d REFINE\n", start_block, block, stop_block)
       end
     end -- for face
   end -- for block
@@ -151,7 +150,6 @@ where
   writes (children.phi)
 do
   var first_child : int64 = children.ispace.bounds.lo
-  var last_child : int64 = children.ispace.bounds.lo
   var first_block : int64 = blocks.ispace.bounds.lo
 
   for block in blocks do
@@ -174,8 +172,7 @@ do
       var right_phi : double
       var right_x : double
 
-      if start_child == first_child
-        and (blocks[block].minusXMoreRefined or blocks[block].minusXMoreCoarse) then
+      if (blocks[block].minusXMoreRefined or blocks[block].minusXMoreCoarse) then
 
         if blocks[block].minusXMoreRefined then
           left_x = [double](left(start_child)) 
@@ -193,8 +190,9 @@ do
 
       end
 
-      if stop_child == (last_child + 1)
-        and (blocks[block].plusXMoreRefined or blocks[block].plusXMoreCoarse) then
+      if (blocks[block].plusXMoreRefined or blocks[block].plusXMoreCoarse) then
+
+        stop_child -= 1
 
         if blocks[block].plusXMoreRefined then
           right_x = [double](right(stop_child)) 
@@ -206,7 +204,6 @@ do
         left_x = parent_x(parent_to_left(stop_child))
         left_phi = ghost_parents[parent_to_left(stop_child)].phi_copy
 
-        stop_child -= 1
         children[stop_child].phi = linear_interpolate([double](stop_child), left_x, right_x,
                                                       left_phi, right_phi)
 
@@ -237,7 +234,6 @@ do
     if blocks[block].cascadeRefinement then
       blocks[block].needsRefinement = true
       blocks[block].cascadeRefinement = false
-      C.printf("block %d needsRefine\n", block)
     end
   end
 end -- smoothGrid
@@ -267,7 +263,6 @@ do
   var stop_block : int64 = blocks.ispace.bounds.hi + 1
 
   for block = start_block, stop_block do
-    C.printf("block: %d <= %d < %d\n", start_block, block, stop_block)
     var left_refinement_delta : int64
 
     if block == 0 then
@@ -319,7 +314,6 @@ do
       children[left_child(block)].isActive = true
       children[right_child(block)].isActive = true
       my_refinement_delta = 1
-      C.printf("refine\n");
 
     elseif blocks[block].isActive then
 
@@ -340,11 +334,9 @@ do
           blocks[block].minusXMoreCoarse = true
           blocks[block].minusXMoreRefined = false
         end
-        C.printf("left delta %d\n", left_refinement_delta - my_refinement_delta)
         if (left_refinement_delta - my_refinement_delta) > 1 then
           blocks[block].cascadeRefinement = true
           needs_regrid = 1
-          C.printf("cascade\n")
         end
       end -- not block 0
 
@@ -359,11 +351,9 @@ do
           blocks[block].plusXMoreCoarse = true
           blocks[block].plusXMoreRefined = false
         end
-        C.printf("right delta %d\n", right_refinement_delta - my_refinement_delta)
         if (right_refinement_delta - my_refinement_delta) > 1 then
           blocks[block].cascadeRefinement = true
           needs_regrid = 1
-          C.printf("cascade\n")
         end
       end -- not last block
     end -- needsRefinement or isActive
@@ -420,8 +410,6 @@ do
         cells[cell].phi_copy = cells[cell].phi
         children[left_child(cell)].phi_copy = cells[cell].phi
         children[right_child(cell)].phi_copy = cells[cell].phi
-        C.printf("block %d parent %d children %d and %d: %f\n", block, cell, left_child(cell),
-                 right_child(cell), cells[cell].phi)
       end
     end -- is Active
   end -- block

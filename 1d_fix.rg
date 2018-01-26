@@ -49,6 +49,8 @@ function make_top_level_task()
       C.printf("Level %d cells %d dx %e\n", level, [num_cells][level], [dx][level])
     end
 
+    fill([meta_region_for_level[MAX_REFINEMENT_LEVEL]].isActive, true)
+
     __demand(__parallel)
     for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
       initializeCells([num_cells][MAX_REFINEMENT_LEVEL],
@@ -56,11 +58,12 @@ function make_top_level_task()
     end
 
     var time : double = 0.0
-    while time < DT do
+    while time < T_FINAL - DT do
 
       __demand(__parallel)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
         calculateFlux(num_cells[MAX_REFINEMENT_LEVEL], [dx][MAX_REFINEMENT_LEVEL], DT,
+        [meta_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
         [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
         [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end
