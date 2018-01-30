@@ -10,6 +10,7 @@ def measure_error(filename):
     for line in f:
       numeric.append(float(line))
     x = np.arange(float(len(numeric)))/float(len(numeric))
+    x += 0.5 * x[1]
     analytic = np.zeros(len(numeric))
     analytic[np.where(x<0.75)] = 1.0
 

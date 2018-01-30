@@ -40,18 +40,34 @@ end -- initializeCells
 
 task applyFlux(dx : double,
                dt : double,
+               blocks: region(ispace(int1d), RefinementBits),
                cells: region(ispace(int1d), CellValues),
                faces: region(ispace(int1d), FaceValues))
 where
-  reads(cells.phi,
+  reads(blocks.isActive,
+        cells.phi,
         faces.flux),
   writes(cells.phi)
 do
-  var face_index : int64 = faces.ispace.bounds.lo
-  for cell in cells do
-    cells[cell].phi = cells[cell].phi - dt * (faces[face_index+1].flux - faces[face_index].flux) / dx
-    face_index = face_index + 1
-  end
+
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+  var first_face : int64 = faces.ispace.bounds.lo
+
+  for block = start_block, stop_block do
+    if blocks[block].isActive then
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X  -- should be modularized
+      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X
+      var face_index : int64 = first_face + (block - start_block) * CELLS_PER_BLOCK_X
+
+      for cell = start_cell, stop_cell do
+        cells[cell].phi = cells[cell].phi - dt * (faces[face_index+1].flux
+                                                  - faces[face_index].flux) / dx
+        face_index = face_index + 1
+      end -- cell
+
+    end -- isActive
+  end -- block
 end -- applyFlux
 
 
@@ -75,7 +91,7 @@ do
 
   for block = start_block, stop_block do
     if blocks[block].isActive then
-      var start_cell : int64 = block * CELLS_PER_BLOCK_X - 1
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X - 1  -- should be modularized
       var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X + 1
       var start_face : int64 = first_face + (block - start_block) * CELLS_PER_BLOCK_X
       var stop_face : int64 = start_face + CELLS_PER_BLOCK_X + 1

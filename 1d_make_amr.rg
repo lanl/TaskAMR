@@ -309,6 +309,23 @@ function make_time_step(num_cells,
 
   end -- level
 
+  for level = 1, MAX_REFINEMENT_LEVEL do
+
+    time_step:insert(rquote
+
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        applyFlux(dx[level],
+                  DT,
+                  [meta_partition_for_level[level]][color],
+                  [cell_partition_for_level[level]][color],
+                  [face_partition_for_level[level]][color])
+      end
+
+    end)
+
+  end -- level
+
   return time_step
 end -- make_time_step
 

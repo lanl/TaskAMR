@@ -76,6 +76,7 @@ end
 -- hard coded euler with Lax-Friedrichs for now, metaprog soon
 task applyFlux(dx : double,
                dt : double,
+               blocks: region(ispace(int1d), RefinementBits),
                cells: region(ispace(int1d), CellValues),
                faces: region(ispace(int1d), FaceValues))
 where

@@ -106,7 +106,7 @@ function make_top_level_task()
     [init_grid_refinement];
 
     var time : double = 0.0
-    while time < DT do 
+    while time < T_FINAL - DT do 
 
       [time_step];
 
