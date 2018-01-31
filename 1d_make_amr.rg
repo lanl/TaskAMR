@@ -278,14 +278,14 @@ function make_time_step(num_cells,
 
     time_step:insert(rquote
 
-      --__demand(__parallel)
-      --for color in [cell_partition_for_level[level]].colors do
-        --interpolateToChildren(num_cells[level+1],
-                              --[meta_partition_for_level[level]][color],
-                              --[bloated_partition_for_level[level]][color],
-                              --[bloated_cell_partition_by_parent_for_level[level+1]][color],
-                              --[parent_cell_partition_for_level[level+1]][color])
-      --end
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        interpolateToChildren(num_cells[level+1],
+                              [meta_partition_for_level[level]][color],
+                              [bloated_partition_for_level[level]][color],
+                              [bloated_cell_partition_by_parent_for_level[level+1]][color],
+                              [parent_cell_partition_for_level[level+1]][color])
+      end
 
     end)
 
@@ -317,6 +317,7 @@ function make_time_step(num_cells,
       calculateFlux(num_cells[MAX_REFINEMENT_LEVEL],
                     dx[MAX_REFINEMENT_LEVEL],
                     DT,
+                    [meta_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
                     [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
                     [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
     end

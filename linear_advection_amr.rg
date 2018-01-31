@@ -425,7 +425,7 @@ task calculateAMRFlux(num_cells : int64,
                    faces: region(ispace(int1d), FaceValues))
 where
   reads(bloated_cells.phi,
-        bloated_children.phi_copy,
+        bloated_children.phi,
         blocks.{isActive,
                 minusXMoreRefined,
                 plusXMoreRefined},
@@ -455,9 +455,9 @@ do
  
       var cell_index : int64 = start_cell
       if blocks[block].minusXMoreRefined then
-        var left : double = bloated_children[right_child(cell_index)].phi_copy
+        var left : double = bloated_children[right_child(cell_index)].phi
         cell_index = cell_index + 1
-        var right : double = bloated_cells[cell_index].phi
+        var right : double = bloated_children[left_child(cell_index)].phi
         var flux : double = 0.5 * vel * (left + right) +0.25 * dx * (left - right)/dt
         faces[start_face].flux = flux
         C.printf("block %d <= %d < %d; start_face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, start_face,flux, right_child(cell_index-1), left, cell_index, right)
@@ -466,8 +466,8 @@ do
  
       if blocks[block].plusXMoreRefined then
         stop_face -= 1
-        var left : double = bloated_cells[stop_cell - 2].phi
-        var right : double = bloated_children[left_child(stop_cell - 1)].phi_copy
+        var left : double = bloated_children[right_child(stop_cell - 2)].phi
+        var right : double = bloated_children[left_child(stop_cell - 1)].phi
         var flux : double = 0.5 * vel * (left + right) +0.25 * dx * (left - right)/dt
         faces[stop_face].flux = flux
         C.printf("block %d <= %d < %d; stop_face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, stop_face,flux, stop_cell - 2, left, left_child(stop_cell - 1), right)
