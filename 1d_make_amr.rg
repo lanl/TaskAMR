@@ -344,3 +344,169 @@ function make_time_step(num_cells,
   return time_step
 end -- make_time_step
 
+
+function make_flag_regrid(num_cells,
+                     dx,
+                     needs_regrid,
+                     do_regrid,
+                     face_partition_for_level,
+                     meta_partition_for_level,
+                     bloated_partition_for_level,
+                     bloated_cell_partition_by_parent_for_level)
+
+  local flag_regrid = terralib.newlist()
+
+
+  for level = 1, MAX_REFINEMENT_LEVEL - 1 do
+
+    flag_regrid:insert(rquote
+
+      __demand(__parallel)
+      for color in [meta_partition_for_level[level]].colors do
+        calculateAMRGradient(num_cells[level],
+                         dx[level],
+                         [meta_partition_for_level[level]][color],
+                         [bloated_partition_for_level[level]][color],
+                         [bloated_cell_partition_by_parent_for_level[level+1]][color],
+                         [face_partition_for_level[level]][color])
+      end
+
+    end)
+
+  end -- level
+  
+  flag_regrid:insert(rquote
+
+    __demand(__parallel)
+    for color in [meta_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
+      calculateGradient(num_cells[MAX_REFINEMENT_LEVEL],
+                        dx[MAX_REFINEMENT_LEVEL],
+                        [bloated_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
+                        [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
+    end
+
+  end)
+
+  for level = 1, MAX_REFINEMENT_LEVEL do
+
+    flag_regrid:insert(rquote
+
+      needs_regrid[level] = 0
+      __demand(__parallel)
+      for color in [meta_partition_for_level[level]].colors do
+        needs_regrid[level] += flagRegrid([meta_partition_for_level[level]][color],
+                                          [face_partition_for_level[level]][color])
+      end
+
+    end)
+
+  end -- level
+  
+  flag_regrid:insert(rquote
+    var [do_regrid] = 0
+    C.printf("RESET do_regrid = %d\n", [do_regrid])
+   end)
+
+  for level = 1, MAX_REFINEMENT_LEVEL do
+
+    flag_regrid:insert(rquote
+
+      [do_regrid] += needs_regrid[level]
+
+    end)
+
+  end -- level
+
+  flag_regrid:insert(rquote
+    C.printf("SUM do_regrid = %d\n", [do_regrid])
+   end)
+
+  return flag_regrid
+end -- make_flag_regrid
+
+
+function make_do_regrid(num_cells,
+                        meta_region_for_level,
+                        cell_region_for_level,
+                        meta_partition_for_level,
+                        cell_partition_for_level,
+                        parent_cell_partition_for_level,
+                        parent_meta_partition_for_level,
+                        bloated_partition_for_level,
+                        bloated_cell_partition_by_parent_for_level,
+                        bloated_parent_meta_partition_for_level,
+                        bloated_meta_partition_for_level
+                        )
+
+  local do_regrid = terralib.newlist()
+
+  -- interpolateToChildren works from phi_copy not phi or __demand(__parallel) fails
+  do_regrid:insert(rquote
+    copy([cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi,
+         [cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi_copy)
+  end)
+
+  for level = 1, MAX_REFINEMENT_LEVEL - 1 do
+
+    do_regrid:insert(rquote
+
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        copyToChildren([meta_partition_for_level[level]][color],
+                       [cell_partition_for_level[level]][color],
+                       [parent_cell_partition_for_level[level+1]][color])
+      end
+
+    end)
+
+  end -- level
+
+  for level = 1, MAX_REFINEMENT_LEVEL - 1 do
+
+    do_regrid:insert(rquote
+
+      __demand(__parallel)
+      for color in [cell_partition_for_level[level]].colors do
+        interpolateToChildren(num_cells[level+1],
+                              [meta_partition_for_level[level]][color],
+                              [bloated_partition_for_level[level]][color],
+                              [bloated_cell_partition_by_parent_for_level[level+1]][color],
+                              [parent_cell_partition_for_level[level+1]][color])
+      end
+
+    end)
+
+  end -- level
+
+  for max_level = 1, MAX_REFINEMENT_LEVEL - 1 do
+
+    for level = 1, max_level do
+
+      do_regrid:insert(rquote
+
+        __demand(__parallel)
+        for color in [cell_partition_for_level[level]].colors do
+          updateRefinementBits(num_cells[level]/CELLS_PER_BLOCK_X,
+                               [meta_partition_for_level[level]][color],
+                               [bloated_meta_partition_for_level[level]][color],
+                               [parent_meta_partition_for_level[level+1]][color],
+                               [bloated_parent_meta_partition_for_level[level+1]][color])
+        end
+
+        fill([meta_region_for_level[level]].needsRefinement, false)
+
+        __demand(__parallel)
+        for color in [cell_partition_for_level[level]].colors do
+          smoothGrid([meta_partition_for_level[level]][color])
+        end
+
+      end)
+
+    end -- level
+
+  end -- max_level
+  
+  return do_regrid
+end -- make_do_regrid
+
+

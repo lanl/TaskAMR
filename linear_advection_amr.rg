@@ -61,20 +61,57 @@ task linear_interpolate(x : double,
   return y0 + (x - x0) * (y1 - y0) / (x1 - x0)
 end
 
+
+__demand(__inline)
+task start_ghost_cell(block : int64)
+  var start_cell : int64 = block * CELLS_PER_BLOCK_X - 1
+  if block == 0 then
+    start_cell += 1 -- no ghost cell on left boundary
+  end
+  return start_cell
+end
+
+
+__demand(__inline)
+task stop_ghost_cell(block : int64)
+  return (block + 1) * CELLS_PER_BLOCK_X + 1
+end
+
+
+__demand(__inline)
+task first_face(block : int64,
+                blocks_ispace : ispace(int1d),
+                faces_ispace : ispace(int1d))
+  var start_block : int64 = blocks_ispace.bounds.lo
+  var start_face : int64 = faces_ispace.bounds.lo
+  return start_face + (block - start_block) * CELLS_PER_BLOCK_X
+end
+
+
+__demand(__inline)
+task last_face(block : int64,
+               blocks_ispace : ispace(int1d),
+               faces_ispace : ispace(int1d))
+  var start_block : int64 = blocks_ispace.bounds.lo
+  var start_face : int64 = faces_ispace.bounds.lo
+  return start_face + (block - start_block + 1) * CELLS_PER_BLOCK_X
+end
+
+
 task calculateGradient(num_cells : int64,
                    dx : double,
-                   cells: region(ispace(int1d), CellValues),
+                   bloated_cells: region(ispace(int1d), CellValues),
                    faces: region(ispace(int1d), FaceValues))
 where
-  reads(cells.phi),
+  reads(bloated_cells.phi),
   writes(faces.grad)
 do
   var vel : double = U
   var left_boundary_face : int64 = faces.ispace.bounds.lo
   var right_boundary_face : int64 = faces.ispace.bounds.hi
 
-  var left_boundary_cell : int64 = cells.ispace.bounds.lo
-  var right_boundary_cell : int64 = cells.ispace.bounds.hi
+  var left_boundary_cell : int64 = bloated_cells.ispace.bounds.lo
+  var right_boundary_cell : int64 = bloated_cells.ispace.bounds.hi
 
   var start_face : int64 = left_boundary_face
   var stop_face : int64 = right_boundary_face + 1
@@ -89,9 +126,9 @@ do
   -- loop on inner faces
   var cell_index : int64 = left_boundary_cell
   for face = start_face, stop_face do
-    var left : double = cells[cell_index].phi
+    var left : double = bloated_cells[cell_index].phi
     cell_index = cell_index + 1
-    var right : double = cells[cell_index].phi
+    var right : double = bloated_cells[cell_index].phi
     var grad : double = (right - left) / dx
     faces[face].grad = grad
   end
@@ -111,7 +148,7 @@ task flagRegrid(blocks: region(ispace(int1d), RefinementBits),
                 
 where
   reads(faces.grad),
-  reads writes(blocks.needsRefinement)
+  writes(blocks.needsRefinement)
 do
   var needs_regrid : int64 = 0
   var first_face : int64 = faces.ispace.bounds.lo
@@ -307,20 +344,22 @@ do
 
     var my_refinement_delta : int64
 
-    if ghosts[block].needsRefinement then
+    if blocks[block].isActive then
+      if ghosts[block].needsRefinement then
 
-      blocks[block].isRefined = true
-      blocks[block].isActive = false
-      children[left_child(block)].isActive = true
-      children[right_child(block)].isActive = true
-      my_refinement_delta = 1
+        blocks[block].isRefined = true
+        blocks[block].isActive = false
+        children[left_child(block)].isActive = true
+        children[right_child(block)].isActive = true
+        my_refinement_delta = 1
 
-    elseif blocks[block].isActive then
+      else
 
-      blocks[block].isRefined = false
-      my_refinement_delta = 0
+        blocks[block].isRefined = false
+        my_refinement_delta = 0
 
-    end -- needsRefinement or isActive
+      end -- needsRefinement
+    end -- isActive
 
     if ghosts[block].needsRefinement or blocks[block].isActive then
       if not (block == 0) then
@@ -416,6 +455,7 @@ do
 end -- copyToChildren
 
 
+-- duplicates code from calculateAMRGrad
 task calculateAMRFlux(num_cells : int64,
                    dx : double,
                    dt : double,
@@ -436,31 +476,29 @@ do
 
   var start_block : int64 = blocks.ispace.bounds.lo
   var stop_block : int64 = blocks.ispace.bounds.hi + 1
-  var first_face : int64 = faces.ispace.bounds.lo
 
   for block = start_block, stop_block do
     if blocks[block].isActive then
-      var start_cell : int64 = block * CELLS_PER_BLOCK_X - 1  -- should be modularized
-      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X + 1
-      var start_face : int64 = first_face + (block - start_block) * CELLS_PER_BLOCK_X
-      var stop_face : int64 = start_face + CELLS_PER_BLOCK_X + 1
+      var start_cell : int64 = start_ghost_cell(block)
+      var stop_cell : int64 = stop_ghost_cell(block)
+      var start_face : int64 = first_face(block, blocks.ispace, faces.ispace)
+      var stop_face : int64 = last_face(block, blocks.ispace, faces.ispace) + 1
 
-      if start_cell == - 1 then
-        start_face += 1
-        start_cell += 1
+      if start_cell == 0 then
+        start_face += 1 -- handle left boundary special
       end
       if stop_cell > num_cells then
-        stop_face -= 1
+        stop_face -= 1 -- handle right boundary special
       end
  
       var cell_index : int64 = start_cell
+
       if blocks[block].minusXMoreRefined then
         var left : double = bloated_children[right_child(cell_index)].phi
         cell_index = cell_index + 1
         var right : double = bloated_children[left_child(cell_index)].phi
         var flux : double = 0.5 * vel * (left + right) +0.25 * dx * (left - right)/dt
         faces[start_face].flux = flux
-        C.printf("block %d <= %d < %d; start_face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, start_face,flux, right_child(cell_index-1), left, cell_index, right)
         start_face += 1
       end
  
@@ -470,7 +508,6 @@ do
         var right : double = bloated_children[left_child(stop_cell - 1)].phi
         var flux : double = 0.5 * vel * (left + right) +0.25 * dx * (left - right)/dt
         faces[stop_face].flux = flux
-        C.printf("block %d <= %d < %d; stop_face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, stop_face,flux, stop_cell - 2, left, left_child(stop_cell - 1), right)
       end
  
       for face = start_face, stop_face do
@@ -479,7 +516,6 @@ do
         var right : double = bloated_cells[cell_index].phi
         var flux : double = 0.5 * vel * (left + right) +0.5 * dx * (left - right)/dt
         faces[face].flux = flux
-        C.printf("block %d <= %d < %d; face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, face,flux, cell_index-1, left, cell_index, right)
       end -- face
 
       -- boundary conditions: hold end cells constant in time
@@ -487,13 +523,87 @@ do
         faces[0].flux = faces[1].flux
       end
       if stop_cell > num_cells then
-        faces[stop_face].flux = faces[stop_face-1].flux  -- this looks like a bug! loop ends < val
+        faces[stop_face].flux = faces[stop_face-1].flux
       end
 
     end -- isActive
   end -- block
 
-end --calculateFlux
+end --calculateAMRFlux
+
+
+-- duplicates code from calculateAMRFlux
+task calculateAMRGradient(num_cells : int64,
+                   dx : double,
+                   blocks: region(ispace(int1d), RefinementBits),
+                   bloated_cells: region(ispace(int1d), CellValues),
+                   bloated_children: region(ispace(int1d), CellValues),
+                   faces: region(ispace(int1d), FaceValues))
+where
+  reads(bloated_cells.phi,
+        bloated_children.phi,
+        blocks.{isActive,
+                minusXMoreRefined,
+                plusXMoreRefined},
+        faces.grad),
+  writes(faces.grad)
+do
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+
+  for block = start_block, stop_block do
+    if blocks[block].isActive then
+      var start_cell : int64 = start_ghost_cell(block)
+      var stop_cell : int64 = stop_ghost_cell(block)
+      var start_face : int64 = first_face(block, blocks.ispace, faces.ispace)
+      var stop_face : int64 = last_face(block, blocks.ispace, faces.ispace) + 1
+
+      if start_cell == 0 then
+        start_face += 1 -- handle left boundary special
+      end
+      if stop_cell > num_cells then
+        stop_face -= 1 -- handle right boundary special
+      end
+ 
+      var cell_index : int64 = start_cell
+
+      if blocks[block].minusXMoreRefined then
+        var left : double = bloated_children[right_child(cell_index)].phi
+        cell_index = cell_index + 1
+        var right : double = bloated_children[left_child(cell_index)].phi
+        var grad : double = 2.0 * (right - left) / dx
+        faces[start_face].grad = grad
+        start_face += 1
+      end
+ 
+      if blocks[block].plusXMoreRefined then
+        stop_face -= 1
+        var left : double = bloated_children[right_child(stop_cell - 2)].phi
+        var right : double = bloated_children[left_child(stop_cell - 1)].phi
+        var grad : double = 2.0 * (right - left) / dx
+        faces[stop_face].grad = grad
+      end
+ 
+      for face = start_face, stop_face do
+        var left : double = bloated_cells[cell_index].phi
+        cell_index = cell_index + 1
+        var right : double = bloated_cells[cell_index].phi
+        var grad : double = (right - left) / dx
+        faces[face].grad = grad
+      end -- face
+
+      -- boundary conditions: hold end cells constant in time
+      if start_cell == 0 then
+        faces[0].grad = 0.0
+      end
+      if stop_cell > num_cells then
+        faces[stop_face].grad = 0.0
+      end
+
+    end -- isActive
+  end -- block
+
+end --calculateAMRGradient
 
 
 

@@ -40,8 +40,11 @@ function make_top_level_task()
   -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
   local dx = regentlib.newsymbol(double[MAX_REFINEMENT_LEVEL+1], "dx")
+  local level_needs_regrid = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "level_needs_regrid")
+  local needs_regrid = regentlib.newsymbol(int64, "needs_regrid")
   local init_num_cells = make_init_num_cells(num_cells,
                                              dx,
+                                             level_needs_regrid,
                                              MAX_REFINEMENT_LEVEL,
                                              cell_region_for_level)
 
@@ -90,6 +93,29 @@ function make_top_level_task()
                                    bloated_cell_partition_by_parent_for_level,
                                    parent_cell_partition_for_level)
 
+  local flag_regrid = make_flag_regrid(num_cells,
+                                       dx,
+                                       level_needs_regrid,
+                                       needs_regrid,
+                                       face_partition_for_level,
+                                       meta_partition_for_level,
+                                       bloated_partition_for_level,
+                                       bloated_cell_partition_by_parent_for_level)
+
+  local do_regrid = make_do_regrid(num_cells,
+                                   meta_region_for_level,
+                                   cell_region_for_level,
+                                   meta_partition_for_level,
+                                   cell_partition_for_level,
+                                   parent_cell_partition_for_level,
+                                   parent_meta_partition_for_level,
+                                   bloated_partition_for_level,
+                                   bloated_cell_partition_by_parent_for_level,
+                                   bloated_parent_meta_partition_for_level,
+                                   bloated_meta_partition_for_level
+                                   )
+
+
   -- top_level task using previous meta programming
   local task top_level()
     [declarations];
@@ -105,10 +131,20 @@ function make_top_level_task()
     [init_regrid_and_values];
     [init_grid_refinement];
 
+    var [needs_regrid]
+    C.printf("INIT needs_regrid = %d\n", [needs_regrid])
+
     var time : double = 0.0
     while time < T_FINAL - DT do 
 
       [time_step];
+      [flag_regrid];
+
+      C.printf("needs_regrid = %d\n", [needs_regrid])
+
+      if [needs_regrid] > 0 then
+        [do_regrid];
+      end
 
       time += DT
       C.printf("time = %f\n",time)

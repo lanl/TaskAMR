@@ -12,8 +12,8 @@ def read_amr(filenames):
     with open(filename, "r") as f:
       for line in f:
         data = line.split()
-        x.append(data[0])
-        phi.append(data[1])
+        x.append(float(data[0]))
+        phi.append(float(data[1]))
 
   return x,phi
   

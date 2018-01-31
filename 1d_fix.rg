@@ -34,8 +34,10 @@ function make_top_level_task()
   -- meta programming to initialize num_cells per level
   local num_cells = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "num_cells")
   local dx = regentlib.newsymbol(double[MAX_REFINEMENT_LEVEL+1], "dx")
+  local needs_regrid = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "needs_regrid")
   local init_num_cells = make_init_num_cells(num_cells,
                                              dx,
+                                             needs_regrid,
                                              MAX_REFINEMENT_LEVEL,
                                              cell_region_for_level)
 
