@@ -414,3 +414,86 @@ do
     end -- is Active
   end -- block
 end -- copyToChildren
+
+
+task calculateAMRFlux(num_cells : int64,
+                   dx : double,
+                   dt : double,
+                   blocks: region(ispace(int1d), RefinementBits),
+                   bloated_cells: region(ispace(int1d), CellValues),
+                   bloated_children: region(ispace(int1d), CellValues),
+                   faces: region(ispace(int1d), FaceValues))
+where
+  reads(bloated_cells.phi,
+        bloated_children.phi_copy,
+        blocks.{isActive,
+                minusXMoreRefined,
+                plusXMoreRefined},
+        faces.flux),
+  writes(faces.flux)
+do
+  var vel : double = U
+
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+  var first_face : int64 = faces.ispace.bounds.lo
+
+  for block = start_block, stop_block do
+    if blocks[block].isActive then
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X - 1  -- should be modularized
+      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X + 1
+      var start_face : int64 = first_face + (block - start_block) * CELLS_PER_BLOCK_X
+      var stop_face : int64 = start_face + CELLS_PER_BLOCK_X + 1
+
+      if start_cell == - 1 then
+        start_face += 1
+        start_cell += 1
+      end
+      if stop_cell > num_cells then
+        stop_face -= 1
+      end
+ 
+      var cell_index : int64 = start_cell
+      if blocks[block].minusXMoreRefined then
+        var left : double = bloated_children[right_child(cell_index)].phi_copy
+        cell_index = cell_index + 1
+        var right : double = bloated_cells[cell_index].phi
+        var flux : double = 0.5 * vel * (left + right) +0.25 * dx * (left - right)/dt
+        faces[start_face].flux = flux
+        C.printf("block %d <= %d < %d; start_face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, start_face,flux, right_child(cell_index-1), left, cell_index, right)
+        start_face += 1
+      end
+ 
+      if blocks[block].plusXMoreRefined then
+        stop_face -= 1
+        var left : double = bloated_cells[stop_cell - 2].phi
+        var right : double = bloated_children[left_child(stop_cell - 1)].phi_copy
+        var flux : double = 0.5 * vel * (left + right) +0.25 * dx * (left - right)/dt
+        faces[stop_face].flux = flux
+        C.printf("block %d <= %d < %d; stop_face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, stop_face,flux, stop_cell - 2, left, left_child(stop_cell - 1), right)
+      end
+ 
+      for face = start_face, stop_face do
+        var left : double = bloated_cells[cell_index].phi
+        cell_index = cell_index + 1
+        var right : double = bloated_cells[cell_index].phi
+        var flux : double = 0.5 * vel * (left + right) +0.5 * dx * (left - right)/dt
+        faces[face].flux = flux
+        C.printf("block %d <= %d < %d; face %d, flux %f from %d:%f and %d:%f\n",start_block, block, stop_block, face,flux, cell_index-1, left, cell_index, right)
+      end -- face
+
+      -- boundary conditions: hold end cells constant in time
+      if start_cell == 0 then
+        faces[0].flux = faces[1].flux
+      end
+      if stop_cell > num_cells then
+        faces[stop_face].flux = faces[stop_face-1].flux  -- this looks like a bug! loop ends < val
+      end
+
+    end -- isActive
+  end -- block
+
+end --calculateFlux
+
+
+
