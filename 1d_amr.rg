@@ -42,6 +42,7 @@ function make_top_level_task()
   local dx = regentlib.newsymbol(double[MAX_REFINEMENT_LEVEL+1], "dx")
   local level_needs_regrid = regentlib.newsymbol(int64[MAX_REFINEMENT_LEVEL+1], "level_needs_regrid")
   local needs_regrid = regentlib.newsymbol(int64, "needs_regrid")
+  local count = regentlib.newsymbol(int64, "count")
   local init_num_cells = make_init_num_cells(num_cells,
                                              dx,
                                              level_needs_regrid,
@@ -50,9 +51,11 @@ function make_top_level_task()
 
   local init_activity = make_init_activity(meta_region_for_level)
 
-  local write_cells = make_write_cells(num_cells,
+  local write_cells = make_write_cells(count,
+                                       num_cells,
                                        meta_partition_for_level,
                                        cell_partition_for_level)
+
   insert_parent_partitions(parent_cell_partition_for_level,
                            parent_meta_partition_for_level,
                            bloated_parent_meta_partition_for_level,
@@ -132,15 +135,13 @@ function make_top_level_task()
     [init_grid_refinement];
 
     var [needs_regrid]
-    C.printf("INIT needs_regrid = %d\n", [needs_regrid])
 
     var time : double = 0.0
+    var [count] = 0
     while time < T_FINAL - DT do 
 
       [time_step];
       [flag_regrid];
-
-      C.printf("needs_regrid = %d\n", [needs_regrid])
 
       if [needs_regrid] > 0 then
         [do_regrid];
@@ -148,8 +149,13 @@ function make_top_level_task()
 
       time += DT
       C.printf("time = %f\n",time)
+
+      if ([count] % 3) == 0 then
+        [write_cells];
+        C.printf("count %d\n",[count])
+      end
+      [count] += 1
     end
-    [write_cells];
   end
   return top_level
 end

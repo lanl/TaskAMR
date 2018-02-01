@@ -141,7 +141,8 @@ function make_init_activity(meta_region_for_level)
 end -- make_init_activity
 
 
-function make_write_cells(num_cells,
+function make_write_cells(count,
+                          num_cells,
                           meta_partition_for_level,
                           cell_partition_for_level)
 
@@ -151,7 +152,9 @@ function make_write_cells(num_cells,
     write_cells:insert(rquote
       __demand(__parallel)
       for color in [meta_partition_for_level[1]].colors do
-        writeAMRCells([num_cells][n], [meta_partition_for_level[n]][color],
+        writeAMRCells([count],
+                      [num_cells][n],
+                      [meta_partition_for_level[n]][color],
                       [cell_partition_for_level[n]][color])
       end
     end)
@@ -404,7 +407,6 @@ function make_flag_regrid(num_cells,
   
   flag_regrid:insert(rquote
     var [do_regrid] = 0
-    C.printf("RESET do_regrid = %d\n", [do_regrid])
    end)
 
   for level = 1, MAX_REFINEMENT_LEVEL do
@@ -416,10 +418,6 @@ function make_flag_regrid(num_cells,
     end)
 
   end -- level
-
-  flag_regrid:insert(rquote
-    C.printf("SUM do_regrid = %d\n", [do_regrid])
-   end)
 
   return flag_regrid
 end -- make_flag_regrid
