@@ -403,8 +403,7 @@ do
 end -- updateRefinementBits
 
 
-task writeAMRCells(count : int64,
-                   ncells : int64,
+task writeAMRCells(ncells : int64,
                    blocks: region(ispace(int1d), RefinementBits),
                    cells: region(ispace(int1d), CellValues))
 where
@@ -416,13 +415,7 @@ do
   var buf : &int8
   buf = [&int8](C.malloc(60))
 
-  var thousands : int64 = count / 1000
-  var hundreds : int64 = (count - 1000 * thousands) / 100
-  var tens : int64 = (count - 1000 * thousands - 100 * hundreds) / 10
-  var ones : int64 = count - 1000 * thousands - 100 * hundreds - 10 * tens
-
-  C.sprintf(buf, "%d%d%d%d_linear_amr.%d.%d.txt", thousands, hundreds, tens, ones, ncells,
-            start_block)
+  C.sprintf(buf, "linear_amr.%d.%d.txt", ncells, start_block)
   var fp = C.fopen(buf,"w")
   for block = start_block, stop_block do
     if blocks[block].isActive then
