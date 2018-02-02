@@ -26,7 +26,7 @@ def test_single_resolution(refinement_level, filename, threshold, descriptor):
       print descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold
       ERROR = 1
     else:
-      print descriptor+": \033[0;32mPASS\033[0m"
+      print descriptor+": \033[0;32mPASS\033[0m ",L2," < ",threshold
   return ERROR
 
 if __name__== "__main__":

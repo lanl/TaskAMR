@@ -6,6 +6,17 @@ from analyze_linear import trapezoid
 from analyze_amr_linear import read_amr
 from test_linear import set_refinement_level
 
+def set_cells_per_block_x(cells_per_block_x):
+  with open("global_const.rg","w") as f:
+    f.write("-- required global constants\n")
+    f.write("CELLS_PER_BLOCK_X = "+str(cells_per_block_x)+"\n")
+    f.write("LEVEL_1_BLOCKS_X = 5\n")
+    f.write("MAX_REFINEMENT_LEVEL = 1\n")
+    f.write("NUM_PARTITIONS = 7\n")
+    f.write("T_FINAL = 0.25\n")
+    f.write("LENGTH_X = 1.0\n")
+    f.close()
+
 def test_amr(refinement_level, filenames, threshold, descriptor):
   ERROR = 0
   with open("/dev/null","w") as dev_null:
@@ -30,6 +41,20 @@ if __name__== "__main__":
 
   subprocess.check_call(["ln","-sf","linear_advection.rg","model.rg"])
   subprocess.check_call(["ln","-sf","linear_advection_amr.rg","model_amr.rg"])
+
+  set_cells_per_block_x(0)
+  with open("/dev/null","w") as dev_null:
+    ERROR = subprocess.call(["../../github/legion/language/regent.py","1d_amr.rg"], stdout=dev_null)
+  if ERROR == 0:
+    print "1d_amr CELLS_PER_BLOCK_X: \033[0;31mFAIL\033[0m"
+    sys.exit(1)
+
+  set_cells_per_block_x(3)
+  with open("/dev/null","w") as dev_null:
+    ERROR = subprocess.call(["../../github/legion/language/regent.py","1d_amr.rg"], stdout=dev_null)
+  if ERROR == 0:
+    print "1d_amr CELLS_PER_BLOCK_X: \033[0;31mFAIL\033[0m"
+    sys.exit(1)
 
   sys.exit(test_amr(4, ["linear_amr.20.0.txt", "linear_amr.40.0.txt","linear_amr.40.3.txt",
                         "linear_amr.80.6.txt","linear_amr.80.12.txt","linear_amr.80.18.txt",

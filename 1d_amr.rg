@@ -118,6 +118,18 @@ function make_top_level_task()
 
   -- top_level task using previous meta programming
   local task top_level()
+
+    -- test inputs
+    if CELLS_PER_BLOCK_X < 2 then
+      C.printf("\n ERROR: CELLS_PER_BLOCK_X must be at least 2!\n\n")
+      C.exit(1)
+    end
+
+    if (CELLS_PER_BLOCK_X % 2) == 1 then
+      C.printf("\n ERROR: CELLS_PER_BLOCK_X must be a multiple of 2!\n\n")
+      C.exit(1)
+    end
+
     [declarations];
     [init_num_cells];
     [init_parent_partitions];
@@ -132,7 +144,6 @@ function make_top_level_task()
     [init_grid_refinement];
 
     var [needs_regrid]
-    C.printf("INIT needs_regrid = %d\n", [needs_regrid])
 
     var time : double = 0.0
     while time < T_FINAL - DT do 

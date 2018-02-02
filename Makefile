@@ -1,4 +1,5 @@
 test:
+	../../github/legion/language/regent.py unit_tests.rg
 	./test_linear_amr.py
 	./test_linear.py
 	./test_euler.py
