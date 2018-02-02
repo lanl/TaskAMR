@@ -31,6 +31,7 @@ if __name__== "__main__":
   subprocess.check_call(["ln","-sf","linear_advection.rg","model.rg"])
   subprocess.check_call(["ln","-sf","linear_advection_amr.rg","model_amr.rg"])
 
-  sys.exit(test_amr(4, ["linear_amr.20.0.txt","linear_amr.40.0.txt",
-           "linear_amr.80.0.txt",
-           "linear_amr.80.14.txt","linear_amr.80.28.txt"], 0.0487396, "AMR 4 levels"))
+  sys.exit(test_amr(4, ["linear_amr.20.0.txt", "linear_amr.40.0.txt","linear_amr.40.3.txt",
+                        "linear_amr.80.6.txt","linear_amr.80.12.txt","linear_amr.80.18.txt",
+                        "linear_amr.80.24.txt","linear_amr.80.30.txt","linear_amr.80.36.txt"],
+                    0.0487396, "AMR 4 levels"))

@@ -10,7 +10,7 @@ def set_refinement_level(refinement_level):
     f.write("CELLS_PER_BLOCK_X = 2 -- must be multiple of 2\n")
     f.write("LEVEL_1_BLOCKS_X = 5\n")
     f.write("MAX_REFINEMENT_LEVEL = "+str(refinement_level)+"\n")
-    f.write("NUM_PARTITIONS = 3\n")
+    f.write("NUM_PARTITIONS = 7\n")
     f.write("T_FINAL = 0.25\n")
     f.write("LENGTH_X = 1.0\n")
     f.close()

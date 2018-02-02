@@ -30,6 +30,7 @@ if __name__== "__main__":
   plt.xlabel("x")
   plt.title("AMR Lax-Friedrichs linear advection")
   plt.ylim([-0.1,1.1])
+  plt.xlim([-0.1,1.1])
   plt.plot(x, phi, '.', label='numeric')
   plt.legend(loc='best')
   plt.show()

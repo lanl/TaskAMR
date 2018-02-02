@@ -150,7 +150,7 @@ function make_write_cells(num_cells,
   for n = 1, MAX_REFINEMENT_LEVEL do
     write_cells:insert(rquote
       __demand(__parallel)
-      for color in [meta_partition_for_level[1]].colors do
+      for color in [meta_partition_for_level[n]].colors do
         writeAMRCells([num_cells][n], [meta_partition_for_level[n]][color],
                       [cell_partition_for_level[n]][color])
       end
