@@ -53,6 +53,7 @@ function make_top_level_task()
   local write_cells = make_write_cells(num_cells,
                                        meta_partition_for_level,
                                        cell_partition_for_level)
+
   insert_parent_partitions(parent_cell_partition_for_level,
                            parent_meta_partition_for_level,
                            bloated_parent_meta_partition_for_level,
@@ -80,6 +81,7 @@ function make_top_level_task()
                                                          meta_partition_for_level,
                                                          bloated_meta_partition_for_level,
                                                          parent_meta_partition_for_level,
+                                                         parent_cell_partition_for_level,
                                                          bloated_parent_meta_partition_for_level,
                                                          meta_region_for_level)
 

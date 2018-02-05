@@ -204,6 +204,7 @@ function make_init_grid_refinement(num_cells,
                                    meta_partition_for_level,
                                    bloated_meta_partition_for_level,
                                    parent_meta_partition_for_level,
+                                   parent_cell_partition_for_level,
                                    bloated_parent_meta_partition_for_level,
                                    meta_region_for_level)
 
@@ -217,11 +218,13 @@ function make_init_grid_refinement(num_cells,
 
         __demand(__parallel)
         for color in [cell_partition_for_level[level]].colors do
-          updateRefinementBits(num_cells[level]/CELLS_PER_BLOCK_X,
-                               [meta_partition_for_level[level]][color],
-                               [bloated_meta_partition_for_level[level]][color],
-                               [parent_meta_partition_for_level[level+1]][color],
-                               [bloated_parent_meta_partition_for_level[level+1]][color])
+          updateRefinement(num_cells[level]/CELLS_PER_BLOCK_X,
+                           [meta_partition_for_level[level]][color],
+                           [cell_partition_for_level[level]][color],
+                           [bloated_meta_partition_for_level[level]][color],
+                           [parent_meta_partition_for_level[level+1]][color],
+                           [parent_cell_partition_for_level[level+1]][color],
+                           [bloated_parent_meta_partition_for_level[level+1]][color])
         end
 
         fill([meta_region_for_level[level]].needsRefinement, false)
@@ -486,11 +489,13 @@ function make_do_regrid(num_cells,
 
         __demand(__parallel)
         for color in [cell_partition_for_level[level]].colors do
-          updateRefinementBits(num_cells[level]/CELLS_PER_BLOCK_X,
-                               [meta_partition_for_level[level]][color],
-                               [bloated_meta_partition_for_level[level]][color],
-                               [parent_meta_partition_for_level[level+1]][color],
-                               [bloated_parent_meta_partition_for_level[level+1]][color])
+          updateRefinement(num_cells[level]/CELLS_PER_BLOCK_X,
+                           [meta_partition_for_level[level]][color],
+                           [cell_partition_for_level[level]][color],
+                           [bloated_meta_partition_for_level[level]][color],
+                           [parent_meta_partition_for_level[level+1]][color],
+                           [parent_cell_partition_for_level[level+1]][color],
+                           [bloated_parent_meta_partition_for_level[level+1]][color])
         end
 
         fill([meta_region_for_level[level]].needsRefinement, false)

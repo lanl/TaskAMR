@@ -276,14 +276,18 @@ do
 end -- smoothGrid
 
 
-task updateRefinementBits(num_blocks: int64,
-                          blocks: region(ispace(int1d), RefinementBits),
-                          ghosts: region(ispace(int1d), RefinementBits),
-                          children: region(ispace(int1d), RefinementBits),
-                          ghost_children: region(ispace(int1d), RefinementBits))
+task updateRefinement(num_blocks: int64,
+                      blocks: region(ispace(int1d), RefinementBits),
+                      cells: region(ispace(int1d), CellValues),
+                      ghosts: region(ispace(int1d), RefinementBits),
+                      children: region(ispace(int1d), RefinementBits),
+                      child_cells: region(ispace(int1d), CellValues),
+                      ghost_children: region(ispace(int1d), RefinementBits))
 where
-  reads (ghosts.needsRefinement),
-  reads (ghost_children.{needsRefinement,
+  reads (ghosts.needsRefinement,
+         children.wantsCoarsening,
+         child_cells.phi,
+         ghost_children.{needsRefinement,
                          isRefined}),
   reads writes (blocks.{isActive,
                   isRefined,
@@ -292,7 +296,8 @@ where
                   minusXMoreRefined,
                   plusXMoreCoarse,
                   minusXMoreCoarse}),
-  writes (children.isActive)
+  writes (children.isActive,
+          cells.phi)
 do
   var needs_regrid : int64 = 0
 
@@ -359,6 +364,19 @@ do
         my_refinement_delta = 0
 
       end -- needsRefinement
+    else
+      if children[left_child(block)].wantsCoarsening
+         and children[right_child(block)].wantsCoarsening then
+
+        cells[block].phi = 0.5 * (child_cells[left_child(block)].phi
+                                   + child_cells[right_child(block)].phi)
+        blocks[block].isRefined = false
+        blocks[block].isActive = true
+        children[left_child(block)].isActive = false
+        children[right_child(block)].isActive = false
+        my_refinement_delta = 0
+
+      end -- children want coarsening
     end -- isActive
 
     if ghosts[block].needsRefinement or blocks[block].isActive then
