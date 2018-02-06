@@ -11,6 +11,7 @@ local MIN_DX = 1.0 / MAX_NX
 -- model specific global constants
 U = 1.0
 MAX_GRAD = 1.0
+MIN_GRAD = 0.1
 
 -- required global constants
 DT = CFL * MIN_DX / U

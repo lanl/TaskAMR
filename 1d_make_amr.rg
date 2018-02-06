@@ -407,7 +407,6 @@ function make_flag_regrid(num_cells,
   
   flag_regrid:insert(rquote
     var [do_regrid] = 0
-    C.printf("RESET do_regrid = %d\n", [do_regrid])
    end)
 
   for level = 1, MAX_REFINEMENT_LEVEL do
@@ -419,10 +418,6 @@ function make_flag_regrid(num_cells,
     end)
 
   end -- level
-
-  flag_regrid:insert(rquote
-    C.printf("SUM do_regrid = %d\n", [do_regrid])
-   end)
 
   return flag_regrid
 end -- make_flag_regrid

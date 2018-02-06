@@ -148,7 +148,8 @@ task flagRegrid(blocks: region(ispace(int1d), RefinementBits),
                 
 where
   reads(faces.grad),
-  writes(blocks.needsRefinement)
+  writes(blocks.{needsRefinement,
+                 wantsCoarsening})
 do
   var needs_regrid : int64 = 0
   var first_face : int64 = faces.ispace.bounds.lo
@@ -162,6 +163,9 @@ do
     for face = start_face, stop_face do
       if MATH.fabs(faces[face].grad) > MAX_GRAD then
         blocks[block].needsRefinement = true
+        needs_regrid = 1
+      elseif MATH.fabs(faces[face].grad) < MIN_GRAD then
+        blocks[block].wantsCoarsening = true
         needs_regrid = 1
       end
     end -- for face
@@ -290,14 +294,14 @@ where
          ghost_children.{needsRefinement,
                          isRefined}),
   reads writes (blocks.{isActive,
-                  isRefined,
-                  cascadeRefinement,
-                  plusXMoreRefined,
-                  minusXMoreRefined,
-                  plusXMoreCoarse,
-                  minusXMoreCoarse}),
-  writes (children.isActive,
-          cells.phi)
+                        isRefined,
+                        cascadeRefinement,
+                        plusXMoreRefined,
+                        minusXMoreRefined,
+                        plusXMoreCoarse,
+                        minusXMoreCoarse},
+                children.isActive),
+  writes (cells.phi)
 do
   var needs_regrid : int64 = 0
 
@@ -366,16 +370,14 @@ do
         my_refinement_delta = 0
 
       end -- needsRefinement
-    else
+    else -- isActive
       var should_coarsen: bool = children[left_child(block)].wantsCoarsening
                                  and children[right_child(block)].wantsCoarsening
+                                 and children[left_child(block)].isActive
+                                 and children[right_child(block)].isActive
                                  and (right_refinement_delta < 1)
                                  and (left_refinement_delta < 1)
-      if children[left_child(block)].wantsCoarsening
-         and children[right_child(block)].wantsCoarsening
-         and right_refinement_delta < 1
-         and left_refinement_delta < 1 then
-
+      if should_coarsen then
         cells[block].phi = 0.5 * (child_cells[left_child(block)].phi
                                    + child_cells[right_child(block)].phi)
         blocks[block].isRefined = false
@@ -385,7 +387,7 @@ do
         my_refinement_delta = 0
 
       end -- children want coarsening
-    end -- isActive
+    end -- not isActive
 
     if ghosts[block].needsRefinement or blocks[block].isActive then
       if not (block == 0) then
