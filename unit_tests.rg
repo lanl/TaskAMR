@@ -125,46 +125,120 @@ function make_test_declarations()
     [init_parent_partitions];
     [init_activity];
 
+    var result : bool;
     var test_name : &int8;
     test_name = [&int8](C.malloc(81));
 
 
-    -- TEST do_regrid
+    -- TEST do_regrid coarsening
 
+    -- looping instead of Lua-recompiling [do_regrid] saves 12 minutes of time
+    for test = 1, 7 do
 
-    -- test Level 1 does not coarsen
+      if test == 1 then
+        -- test Level 1 does not coarsen
+        fill([meta_region_for_level[1]].wantsCoarsening, true);
+        C.sprintf(test_name, "do_regrid::Level 1 does not coarsen");
+      elseif test == 2 then
+        -- test only coarsen if sibling does
+        [meta_region_for_level[1]][0].isActive = false;
+        [meta_region_for_level[1]][0].isRefined = true;
+        [meta_region_for_level[2]][0].isActive = true;
+        [meta_region_for_level[2]][1].isActive = true;
+        [meta_region_for_level[2]][1].wantsCoarsening = true;
+        C.sprintf(test_name, "do_regrid::Only coarsen if sibling also wants");
+      elseif test == 3 then
+        -- test can't coarsen if neighbor refines
+        fill([meta_region_for_level[1]].isRefined, true);
+        fill([meta_region_for_level[1]].isActive, false);
+        fill([meta_region_for_level[2]].isActive, true);
+        [meta_region_for_level[2]][0].wantsCoarsening = true;
+        [meta_region_for_level[2]][1].wantsCoarsening = true;
+        [meta_region_for_level[2]][2].needsRefinement = true;
+        C.sprintf(test_name, "do_regrid::Cannot coarsen if right neighbor refines");
+      elseif test == 4 then
+        fill([meta_region_for_level[1]].isRefined, true);
+        fill([meta_region_for_level[1]].isActive, false);
+        fill([meta_region_for_level[2]].isActive, true);
+        [meta_region_for_level[2]][2].wantsCoarsening = true;
+        [meta_region_for_level[2]][3].wantsCoarsening = true;
+        [meta_region_for_level[2]][1].needsRefinement = true;
+        C.sprintf(test_name, "do_regrid::Cannot coarsen if left neighbor refines");
+      elseif test == 5 then
+        -- test can't coarsen if neighbor is refined
+        fill([meta_region_for_level[1]].isRefined, true);
+        fill([meta_region_for_level[1]].isActive, false);
+        [meta_region_for_level[1]][0].isActive = true;
+        [meta_region_for_level[1]][0].isRefined = false;
+        fill([meta_region_for_level[2]].isActive, true);
+        fill([meta_region_for_level[2]].isRefined, false);
+        [meta_region_for_level[2]][0].isActive = false;
+        [meta_region_for_level[2]][1].isActive = false;
+        [meta_region_for_level[2]][4].isActive = false;
+        [meta_region_for_level[2]][4].isRefined = true;
+        [meta_region_for_level[3]][8].isActive = true;
+        [meta_region_for_level[3]][9].isActive = true;
+        [meta_region_for_level[2]][1].isActive = false;
+        [meta_region_for_level[2]][3].wantsCoarsening = true;
+        [meta_region_for_level[2]][2].wantsCoarsening = true;
+        C.sprintf(test_name, "do_regrid::Cannot coarsen if right neighbor is refined");
+      elseif test == 6 then
+        fill([meta_region_for_level[1]].isRefined, true);
+        fill([meta_region_for_level[1]].isActive, false);
+        fill([meta_region_for_level[2]].isActive, true);
+        fill([meta_region_for_level[2]].isRefined, false);
+        [meta_region_for_level[2]][1].isActive = false;
+        [meta_region_for_level[2]][1].isRefined = true;
+        [meta_region_for_level[3]][2].isActive = false;
+        [meta_region_for_level[3]][3].isActive = false;
+        [meta_region_for_level[2]][3].wantsCoarsening = true;
+        [meta_region_for_level[2]][2].wantsCoarsening = true;
+        C.sprintf(test_name, "do_regrid::Cannot coarsen if left neighbor is refined");
+      end
 
-    fill([meta_region_for_level[1]].wantsCoarsening, true);
-    [do_regrid];
-    C.sprintf(test_name, "do_regrid::Level 1 does not coarsen");
-    ASSERT_BOOL_EQUAL([meta_region_for_level[1]][0].isActive, true, test_name);
+      [do_regrid];
 
-    -- test only coarsen if sibling does
+      if test == 1 then
+        result = [meta_region_for_level[1]][0].isActive;
+      elseif test == 2 then
+        var not_sibling : bool = (not [meta_region_for_level[1]][0].isActive)
+                                 and [meta_region_for_level[1]][0].isRefined
+                                 and [meta_region_for_level[2]][0].isActive
+                                 and [meta_region_for_level[2]][1].isActive;
+        [meta_region_for_level[2]][0].wantsCoarsening = true;
+        [do_regrid];
+        result = not_sibling
+                and [meta_region_for_level[1]][0].isActive
+                and (not [meta_region_for_level[1]][0].isRefined)
+                and (not [meta_region_for_level[2]][0].isActive)
+                and (not [meta_region_for_level[2]][1].isActive)
+      elseif test == 3 then
+        result = [meta_region_for_level[1]][0].isRefined
+                 and (not [meta_region_for_level[1]][0].isActive)
+                 and [meta_region_for_level[2]][0].isActive
+                 and [meta_region_for_level[2]][1].isActive
+      elseif test == 4 then
+        result = [meta_region_for_level[1]][1].isRefined
+                 and (not [meta_region_for_level[1]][1].isActive)
+                 and [meta_region_for_level[2]][2].isActive
+                 and [meta_region_for_level[2]][3].isActive
+      elseif test == 5 then
+        result = [meta_region_for_level[1]][1].isRefined
+                 and (not [meta_region_for_level[1]][1].isActive)
+                 and [meta_region_for_level[2]][2].isActive
+                 and [meta_region_for_level[2]][3].isActive
+      elseif test == 6 then
+        result = [meta_region_for_level[1]][1].isRefined
+                 and (not [meta_region_for_level[1]][1].isActive)
+                 and [meta_region_for_level[2]][2].isActive
+                 and [meta_region_for_level[2]][3].isActive
+      end
 
-    [meta_region_for_level[1]][0].isActive = false;
-    [meta_region_for_level[1]][0].isRefined = true;
-    [meta_region_for_level[2]][0].isActive = true;
-    [meta_region_for_level[2]][1].isActive = true;
-    [meta_region_for_level[2]][1].wantsCoarsening = true;
-    [do_regrid];
-    C.sprintf(test_name, "do_regrid::Only coarsen if sibling also wants");
-    var not_sibling : bool
-      = (not [meta_region_for_level[1]][0].isActive)
-      and [meta_region_for_level[1]][0].isRefined
-      and [meta_region_for_level[2]][0].isActive
-      and [meta_region_for_level[2]][1].isActive;
-
-    [meta_region_for_level[2]][0].wantsCoarsening = true;
-    [do_regrid];
-
-    ASSERT_BOOL_EQUAL(not_sibling
-                      and [meta_region_for_level[1]][0].isActive
-                      and (not [meta_region_for_level[1]][0].isRefined)
-                      and (not [meta_region_for_level[2]][0].isActive)
-                      and (not [meta_region_for_level[2]][1].isActive), true, test_name)
-
+      ASSERT_BOOL_EQUAL(result, true, test_name);
+    end -- test
 
     -- test cell count
+
     var ncells_level1 : int64 = [cell_region_for_level[1]].ispace.bounds.hi
                               - [cell_region_for_level[1]].ispace.bounds.lo + 1
     C.sprintf(test_name, "declarations::Level 1 cell count")

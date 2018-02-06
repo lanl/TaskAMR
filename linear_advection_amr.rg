@@ -310,6 +310,7 @@ do
     if block == 0 then
       blocks[block].minusXMoreCoarse = false
       blocks[block].minusXMoreRefined = false
+      left_refinement_delta = 0
     else
       if ghost_children[right_child(left(block))].needsRefinement then
         left_refinement_delta = 2
@@ -331,6 +332,7 @@ do
     if block == (num_blocks -1 ) then
       blocks[block].plusXMoreCoarse = false
       blocks[block].plusXMoreRefined = false
+      right_refinement_delta = 0
     else
       if ghost_children[left_child(right(block))].needsRefinement then
         right_refinement_delta = 2
@@ -365,8 +367,14 @@ do
 
       end -- needsRefinement
     else
+      var should_coarsen: bool = children[left_child(block)].wantsCoarsening
+                                 and children[right_child(block)].wantsCoarsening
+                                 and (right_refinement_delta < 1)
+                                 and (left_refinement_delta < 1)
       if children[left_child(block)].wantsCoarsening
-         and children[right_child(block)].wantsCoarsening then
+         and children[right_child(block)].wantsCoarsening
+         and right_refinement_delta < 1
+         and left_refinement_delta < 1 then
 
         cells[block].phi = 0.5 * (child_cells[left_child(block)].phi
                                    + child_cells[right_child(block)].phi)
