@@ -133,7 +133,7 @@ function make_test_declarations()
     -- TEST do_regrid coarsening
 
     -- looping instead of Lua-recompiling [do_regrid] saves 12 minutes of time
-    for test = 1, 7 do
+    for test = 1, 8 do
 
       if test == 1 then
         -- test Level 1 does not coarsen
@@ -194,6 +194,14 @@ function make_test_declarations()
         [meta_region_for_level[2]][3].wantsCoarsening = true;
         [meta_region_for_level[2]][2].wantsCoarsening = true;
         C.sprintf(test_name, "do_regrid::Cannot coarsen if left neighbor is refined");
+      elseif test == 7 then
+        [meta_region_for_level[1]][0].isActive = false;
+        [meta_region_for_level[1]][0].isRefined = true;
+        [meta_region_for_level[2]][0].isActive = true;
+        [meta_region_for_level[2]][1].isActive = false;
+        [meta_region_for_level[2]][1].wantsCoarsening = true;
+        [meta_region_for_level[2]][0].wantsCoarsening = true;
+        C.sprintf(test_name, "do_regrid::Cannot coarsen if not even active");
       end
 
       [do_regrid];
@@ -232,6 +240,14 @@ function make_test_declarations()
                  and (not [meta_region_for_level[1]][1].isActive)
                  and [meta_region_for_level[2]][2].isActive
                  and [meta_region_for_level[2]][3].isActive
+      elseif test == 7 then
+        C.printf("parent active %d refined %d left child %d right %d\n",[meta_region_for_level[1]][0].isActive,
+                 [meta_region_for_level[1]][0].isRefined,
+                 [meta_region_for_level[2]][0].isActive,
+                 [meta_region_for_level[2]][1].isActive)
+        result = (not [meta_region_for_level[1]][0].isActive)
+                 and [meta_region_for_level[1]][0].isRefined
+                 and [meta_region_for_level[2]][0].isActive
       end
 
       ASSERT_BOOL_EQUAL(result, true, test_name);
