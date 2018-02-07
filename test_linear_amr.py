@@ -22,7 +22,7 @@ def test_amr(refinement_level, filenames, threshold, descriptor):
   with open("/dev/null","w") as dev_null:
 
     set_refinement_level(refinement_level)
-    subprocess.check_call(["../../github/legion/language/regent.py","1d_amr.rg"], stdout=dev_null)
+    subprocess.check_call(['../../github/legion/language/regent.py','1d_amr.rg','-ll:cpu','2'], stdout=dev_null)
 
     x, numeric = read_amr(filenames)
     x = np.array(x)
