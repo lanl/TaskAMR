@@ -148,8 +148,8 @@ task flagRegrid(blocks: region(ispace(int1d), RefinementBits),
                 
 where
   reads(faces.grad),
-  writes(blocks.{needsRefinement,
-                 wantsCoarsening})
+  writes(blocks.needsRefinement),
+  reads writes(blocks.wantsCoarsening)
 do
   var needs_regrid : int64 = 0
   var first_face : int64 = faces.ispace.bounds.lo
@@ -160,15 +160,19 @@ do
   for block = start_block, stop_block do
     var start_face : int64 = first_face + CELLS_PER_BLOCK_X * (block - start_block)
     var stop_face : int64 = start_face + CELLS_PER_BLOCK_X + 1
+    blocks[block].wantsCoarsening = true
     for face = start_face, stop_face do
       if MATH.fabs(faces[face].grad) > MAX_GRAD then
         blocks[block].needsRefinement = true
         needs_regrid = 1
-      elseif MATH.fabs(faces[face].grad) < MIN_GRAD then
-        blocks[block].wantsCoarsening = true
-        needs_regrid = 1
+      end
+      if MATH.fabs(faces[face].grad) > MIN_GRAD then
+        blocks[block].wantsCoarsening = false
       end
     end -- for face
+    if blocks[block].wantsCoarsening then
+      needs_regrid = 1
+    end
   end -- for block
 
   return needs_regrid
@@ -375,8 +379,8 @@ do
                                  and children[right_child(block)].wantsCoarsening
                                  and children[left_child(block)].isActive
                                  and children[right_child(block)].isActive
-                                 and (right_refinement_delta < 1)
-                                 and (left_refinement_delta < 1)
+                                 and (right_refinement_delta < 2)
+                                 and (left_refinement_delta < 2)
       if should_coarsen then
         cells[block].phi = 0.5 * (child_cells[left_child(block)].phi
                                    + child_cells[right_child(block)].phi)

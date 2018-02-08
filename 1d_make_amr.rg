@@ -247,6 +247,7 @@ function make_init_grid_refinement(num_cells,
         end
 
         fill([meta_region_for_level[level]].needsRefinement, false)
+        fill([meta_region_for_level[level]].wantsCoarsening, false)
 
         __demand(__parallel)
         for color in [cell_partition_for_level[level]].colors do
@@ -524,6 +525,10 @@ function make_do_regrid(num_cells,
     end -- level
 
   end -- max_level
+
+  do_regrid:insert(rquote
+    fill([meta_region_for_level[MAX_REFINEMENT_LEVEL]].needsRefinement, false)
+  end)
   
   return do_regrid
 end -- make_do_regrid
