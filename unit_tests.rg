@@ -104,7 +104,16 @@ function make_test_declarations()
                                                               bloated_parent_meta_partition_for_level,
                                                               bloated_cell_partition_by_parent_for_level,
                                                               num_cells)
- 
+
+  local flag_regrid = make_flag_regrid(num_cells,
+                                       dx,
+                                       level_needs_regrid,
+                                       needs_regrid,
+                                       face_partition_for_level,
+                                       meta_partition_for_level,
+                                       bloated_partition_for_level,
+                                       bloated_cell_partition_by_parent_for_level)
+
   local do_regrid = make_do_regrid(num_cells,
                                    meta_region_for_level,
                                    cell_region_for_level,
@@ -241,10 +250,6 @@ function make_test_declarations()
                  and [meta_region_for_level[2]][2].isActive
                  and [meta_region_for_level[2]][3].isActive
       elseif test == 7 then
-        C.printf("parent active %d refined %d left child %d right %d\n",[meta_region_for_level[1]][0].isActive,
-                 [meta_region_for_level[1]][0].isRefined,
-                 [meta_region_for_level[2]][0].isActive,
-                 [meta_region_for_level[2]][1].isActive)
         result = (not [meta_region_for_level[1]][0].isActive)
                  and [meta_region_for_level[1]][0].isRefined
                  and [meta_region_for_level[2]][0].isActive
@@ -252,6 +257,17 @@ function make_test_declarations()
 
       ASSERT_BOOL_EQUAL(result, true, test_name);
     end -- test
+
+    -- only coarsen if both face gradients are shallow
+
+    fill([cell_region_for_level[1]].phi, 1.0);
+    fill([meta_region_for_level[1]].isActive, true);
+    fill([meta_region_for_level[1]].wantsCoarsening, false);
+    fill([meta_region_for_level[1]].needsRefinement, false);
+    [cell_region_for_level[1]][2].phi = 0.0;
+    [flag_regrid];
+    C.sprintf(test_name, "flag_regrid::Both gradients must be shallow")
+    ASSERT_BOOL_EQUAL([meta_region_for_level[1]][1].wantsCoarsening, false, test_name);
 
     -- test cell count
 
