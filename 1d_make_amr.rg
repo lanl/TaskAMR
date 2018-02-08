@@ -161,6 +161,25 @@ function make_write_cells(num_cells,
 end -- make_write_cells
 
 
+function make_print_grid(meta_partition_for_level,
+                         cell_partition_for_level)
+
+  local print_grid = terralib.newlist()
+
+  for n = 1, MAX_REFINEMENT_LEVEL do
+    print_grid:insert(rquote
+      __demand(__parallel)
+      for color in [meta_partition_for_level[n]].colors do
+        printAMRCells([n], [meta_partition_for_level[n]][color],
+                      [cell_partition_for_level[n]][color])
+      end
+    end)
+  end
+
+  return print_grid
+end -- make_print_grid
+
+
 function make_init_regrid_and_values(num_cells,
                                      dx,
                                      cell_partition_for_level,

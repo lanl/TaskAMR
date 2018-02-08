@@ -459,6 +459,65 @@ do
 end -- writeAMRCells
 
 
+task printAMRCells(level : int64,
+                   blocks: region(ispace(int1d), RefinementBits),
+                   cells: region(ispace(int1d), CellValues))
+where
+  reads(cells.phi),
+  reads(blocks.{isActive,
+                isRefined,
+                needsRefinement,
+                cascadeRefinement,
+                wantsCoarsening,
+                plusXMoreRefined,
+                minusXMoreRefined,
+                plusXMoreCoarse,
+                minusXMoreCoarse})
+do
+  var start_block : int64 = blocks.ispace.bounds.lo
+  var stop_block : int64 = blocks.ispace.bounds.hi + 1
+
+  for block = start_block, stop_block do
+    C.printf("lvl %d block %d ", level, block)
+    if blocks[block].isRefined then
+      C.printf("refined ");
+    end
+    if blocks[block].needsRefinement then
+      C.printf("needs ");
+    end
+    if blocks[block].cascadeRefinement then
+      C.printf("cascade ");
+    end
+    if blocks[block].wantsCoarsening then
+      C.printf("wants ");
+    end
+    if blocks[block].plusXMoreRefined then
+      C.printf("+> ");
+    end
+    if blocks[block].minusXMoreRefined then
+      C.printf("-> ");
+    end
+    if blocks[block].plusXMoreCoarse then
+      C.printf("+< ");
+    end
+    if blocks[block].minusXMoreCoarse then
+      C.printf("-< ");
+    end
+    if blocks[block].isActive then
+      C.printf("active\n");
+      var start_cell : int64 = block * CELLS_PER_BLOCK_X
+      var stop_cell : int64 = (block + 1) * CELLS_PER_BLOCK_X
+      for cell = start_cell, stop_cell do
+        C.printf("%f ", cells[cell].phi)
+      end
+      C.printf("\n");
+    else
+      C.printf("INactive\n");
+    end -- is Active
+  end -- block
+end -- printAMRCells
+
+
 task copyToChildren(blocks: region(ispace(int1d), RefinementBits),
                     cells: region(ispace(int1d), CellValues),
                     children: region(ispace(int1d), CellValues))

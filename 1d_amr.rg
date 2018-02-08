@@ -117,6 +117,9 @@ function make_top_level_task()
                                    bloated_meta_partition_for_level
                                    )
 
+  local print_grid = make_print_grid(meta_partition_for_level,
+                                     cell_partition_for_level)
+
 
   -- top_level task using previous meta programming
   local task top_level()
@@ -153,12 +156,10 @@ function make_top_level_task()
       [time_step];
       [flag_regrid];
 
-      C.printf("needs_regrid = %d\n", [needs_regrid])
-
       if [needs_regrid] > 0 then
         [do_regrid];
       end
-
+ 
       time += DT
       C.printf("time = %f\n",time)
     end
