@@ -9,11 +9,11 @@ Please read the [License](./LICENSE).
 
 1. At minimum, you need a C compiler, CLang (that includes LLVM), and MPI.
   * I used gcc/4.9.3, clang/3.7.0, and openmpi/1.10.0-gcc_4.9.3
-2. git clone https://github.com/StanfordLegion/legion.git
-3. cd legion/language/
-4. ./install.py --debug
+2. `git clone git@gitlab.com:StanfordLegion/legion.git`
+3. `cd legion/language/`
+4. `./install.py --debug`
   * For performance runs, repeat without the `--debug`.
-5. ./regent.py ./examples/circuit.rg 
+5. Test your installation with `./regent.py ./examples/circuit.rg`.
 
 ## 1D fixed-grid linear advection
 
@@ -37,7 +37,7 @@ mpirun -n 4 <PATH_TO>/regent.py ./1d_fix.rg
 `global_const.rg` requires the settings:
 
 ```
-CELLS_PER_BLOCK_X = -- must be multiple of 2
+CELLS_PER_BLOCK_X = -- must be multiple of 2 for AMR
 LEVEL_1_BLOCKS_X = -- number of blocks at coarsest level
 MAX_REFINEMENT_LEVEL = -- every level above 1 doubles max resolution
 NUM_PARTITIONS = -- how many parallel pieces to break problem into (suggestion)
@@ -59,7 +59,7 @@ fspace FaceValues = -- Do not change these
 
 #### Initial conditions
 
-In `linear_advection.rg`, the task `initializeCells` can be altered to change the initial conditions.
+In `linear_advection.rg`, the task `initializeCells()` can be altered to change the initial conditions.
 
 
 
@@ -69,8 +69,7 @@ In `linear_advection.rg`, the task `initializeCells` can be altered to change th
 ```
 ln -sf euler.rg model.rg
 ```
-2. Change simulation run time
-Change `global_const.rg` to have
+2. Change simulation run time in `global_const.rg`:
 ```
 T_FINAL = 0.142681382
 ```
@@ -78,16 +77,15 @@ T_FINAL = 0.142681382
 ```
 mpirun -n 4 <PATH_TO>/regent.py ./1d_fix.rg 
 ```
-3. Change simulation run time
-Change `global_const.rg` to have
+4. Change simulation resolution in `global_const.rg`:
 ```
 CELLS_PER_BLOCK_X = 32
 ```
-3. Run the model
+5. Run the model
 ```
 mpirun -n 4 <PATH_TO>/regent.py ./1d_fix.rg 
 ```
-4. Plot the final time result
+6. Plot the final time results
 ```
 ./analyze_euler.py euler.80.txt euler.1280.txt
 ```
@@ -109,7 +107,7 @@ fspace FaceValues = -- Do not change these
 
 #### Initial conditions
 
-In `euler.rg`, the task `initializeCells` can be altered to change the initial conditions.
+In `euler.rg`, the task `initializeCells()` can be altered to change the initial conditions.
 
 
 ## 1D AMR-grid linear advection
@@ -156,9 +154,9 @@ To run the euler fixed-grid convergence test:
 ./test_euler.py
 ```
 
-To run the linear fixed-grid convergence test:
+To run the linear AMR-grid convergence test:
 ```
-./test_linear.py
+./test_linear_amr.py
 ```
 
 ### Unit tests
