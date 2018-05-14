@@ -19,21 +19,6 @@ require("global_const")
 require("refinement_bits")
 require("linear_constants")
 
--- model specific tasks must implement following API:
--- task initializeCells(num_cells : int64,
---                      cell_region: region(ispace(int1d), CellValues))
--- task calculateFlux(num_cells : int64,
---                    dx : double,
---                    dt : double,
---                    cells: region(ispace(int1d), CellValues),
---                    faces: region(ispace(int1d), FaceValues))
--- task applyFlux(dx : double,
---                dt : double,
---                cells: region(ispace(int1d), CellValues),
---                faces: region(ispace(int1d), FaceValues))
--- task writeCells(num_cells : int64,
---                 cells: region(ispace(int1d), CellValues))
-
 
 task initializeCells(num_cells : int64,
                      cell_region: region(ispace(int1d), CellValues))
@@ -48,6 +33,7 @@ do
     end
   end
 end -- initializeCells
+
 
 
 task applyFlux(dx : double,

@@ -19,7 +19,6 @@ require("global_const")
 require("refinement_bits")
 require("linear_constants")
 
--- model specific tasks must implement following API:
 
 
 __demand(__inline)

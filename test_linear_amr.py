@@ -71,4 +71,4 @@ if __name__== "__main__":
   sys.exit(test_amr(4, ["linear_amr.20.0.txt", "linear_amr.40.0.txt","linear_amr.40.3.txt",
                         "linear_amr.80.6.txt","linear_amr.80.12.txt","linear_amr.80.18.txt",
                         "linear_amr.80.24.txt","linear_amr.80.30.txt","linear_amr.80.36.txt"],
-                    0.0487396, "AMR 4 levels"))
+                    0.0502553, "AMR 4 levels"))

@@ -151,10 +151,10 @@ if __name__== "__main__":
   plt.xscale('log')
   plt.plot(NX,Error,'o')
 
-  fit = np.polyfit(np.log(NX[5:]),np.log(Error[5:]),1)
-  p = fit[0]
-  A = np.exp(fit[1])
-  plt.plot(NX, A * NX**p,label="NX^"+str(p))
+  #fit = np.polyfit(np.log(NX[5:]),np.log(Error[5:]),1)
+  #p = fit[0]
+  #A = np.exp(fit[1])
+  #plt.plot(NX, A * NX**p,label="NX^"+str(p))
   plt.legend(loc='best')
   plt.show()
 
