@@ -3,6 +3,7 @@ Adaptive Mesh Refinement for Finite Volumes using Legion
 
 ## License
 
+C18035 - TaskAMR has been acknowledged by NNSA for open source release. 
 Please read the [License](./LICENSE).
 
 ## Installation instructions
