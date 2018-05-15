@@ -131,7 +131,7 @@ mpirun -n 4 <PATH_TO>/regent.py ./1d_amr.rg
 
 #### Global constants
 `global_const.rg` settings are the same as for fixed-grid linear advection
-with the exception that `LENGTH_X / (CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * 2 ** (MAX_REFINEMENT_LEVEL - 1))` is now the minumum grid size instead
+with the exception that `LENGTH_X / (CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * 2 ** (MAX_REFINEMENT_LEVEL - 1))` is now the minimum grid size instead
 of the fixed grid size.
 
 #### Linear model constants
