@@ -11,8 +11,6 @@
 # If software is modified to produce derivative works, such modified software should be
 # clearly marked, so as not to confuse it with the version available from LANL.
 #
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 
@@ -30,6 +28,9 @@ def read_amr(filenames):
   return x,phi
   
 if __name__== "__main__":
+  import matplotlib
+  import matplotlib.pyplot as plt
+
   parser = argparse.ArgumentParser(description='Plot convergence for fixed grid linear advection.')
   parser.add_argument('text_files',nargs='*')
 
