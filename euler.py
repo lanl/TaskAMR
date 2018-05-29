@@ -13,7 +13,6 @@
 #
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 GAMMA = 1.4
 BETA = (GAMMA + 1.0) / (GAMMA - 1.0)
@@ -48,6 +47,7 @@ rho_0[x_r] = rho_r
 u_0[x_r] = u_r
 
 def plot_density(density):
+    import matplotlib.pyplot as plt
     plt.figure()
     plt.ylabel("density")
     plt.yticks([0,0.3,0.6,0.9,1.2])
@@ -57,6 +57,7 @@ def plot_density(density):
     plt.plot(x,density)
 
 def plot_speed(speed):
+    import matplotlib.pyplot as plt
     plt.figure()
     plt.ylabel("speed")
     #plt.yticks([0,0.3,0.6,0.9,1.2])
@@ -67,6 +68,7 @@ def plot_speed(speed):
 
 
 def plot_velocity(velocity):
+    import matplotlib.pyplot as plt
     plt.figure()
     plt.ylabel("velocity")
     plt.yticks([0,0.3,0.6,0.9,1.2])
@@ -77,6 +79,7 @@ def plot_velocity(velocity):
 
 
 def plot_pressure(pressure):
+    import matplotlib.pyplot as plt
     plt.figure()
     plt.ylabel("pressure")
     plt.yticks([0,0.3,0.6,0.9,1.2])
@@ -87,6 +90,7 @@ def plot_pressure(pressure):
 
 
 def plot_sie(sie):
+    import matplotlib.pyplot as plt
     plt.figure()
     plt.ylabel("specific internal energy")
     plt.yticks([1,1.5,2.0,2.5,3.0])

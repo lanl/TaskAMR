@@ -13,7 +13,6 @@
 #
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from euler import GAMMA, BETA, x, x_jump, t_final, P_l, rho_l, u_l, P_r, rho_r, u_r
 from euler import plot_density, plot_velocity, plot_pressure, plot_sie, plot_speed
@@ -100,6 +99,7 @@ def verify_Rankine_Hugoniot(P_u, rho_u, v_u, P_d, rho_d, v_d, S):
     #print rho_u*v_u - rho_d*v_d,"vs",S*(rho_u-rho_d)
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
 
     P = np.arange(0.01, 2.0, 0.01)
 

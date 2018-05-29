@@ -12,9 +12,13 @@
 # clearly marked, so as not to confuse it with the version available from LANL.
 #
 import numpy as np
+import os
 import subprocess
 import sys
 from analyze_linear import measure_error
+
+legion_root = os.environ.get('LEGION_ROOT', '../../github/legion')
+regent = os.path.join(legion_root, 'language/regent.py')
 
 def set_refinement_level(refinement_level):
   with open("global_const.rg","w") as f:
@@ -32,7 +36,7 @@ def test_single_resolution(refinement_level, filename, threshold, descriptor):
   with open("/dev/null","w") as dev_null:
 
     set_refinement_level(refinement_level)
-    subprocess.check_call(["../../github/legion/language/regent.py","1d_fix.rg"], stdout=dev_null)
+    subprocess.check_call([regent,"1d_fix.rg"], stdout=dev_null)
     L2, x, numeric, analytic = measure_error(filename)
     if (L2 > threshold) or np.isnan(L2) :
       print descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold
