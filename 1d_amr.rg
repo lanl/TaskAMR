@@ -86,7 +86,8 @@ function make_top_level_task()
                                                              cell_partition_for_level,
                                                              bloated_partition_for_level,
                                                              face_partition_for_level,
-                                                             meta_partition_for_level)
+                                                             meta_partition_for_level,
+                                                             meta_region_for_level)
 
   local init_grid_refinement = make_init_grid_refinement(num_cells,
                                                          cell_partition_for_level,

@@ -197,9 +197,20 @@ function make_init_regrid_and_values(num_cells,
                                      cell_partition_for_level,
                                      bloated_partition_for_level,
                                      face_partition_for_level,
-                                     meta_partition_for_level)
+                                     meta_partition_for_level,
+                                     meta_region_for_level)
 
   local init_regrid_and_values = terralib.newlist()
+
+  for level = 1, MAX_REFINEMENT_LEVEL do
+
+    init_regrid_and_values:insert(rquote
+
+        fill([meta_region_for_level[level]].isRefined, false)
+
+    end)
+
+  end -- level
 
   for level = 1, MAX_REFINEMENT_LEVEL do
 
