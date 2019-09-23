@@ -172,7 +172,7 @@ function make_write_cells(num_cells,
 
   for n = 1, MAX_REFINEMENT_LEVEL do
     write_cells:insert(rquote
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [meta_partition_for_level[n]].colors do
         writeAMRCells([num_cells][n], [meta_partition_for_level[n]][color],
                       [cell_partition_for_level[n]][color])
@@ -191,7 +191,7 @@ function make_print_grid(meta_partition_for_level,
 
   for n = 1, MAX_REFINEMENT_LEVEL do
     print_grid:insert(rquote
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [meta_partition_for_level[n]].colors do
         printAMRCells([n], [meta_partition_for_level[n]][color],
                       [cell_partition_for_level[n]][color])
@@ -227,18 +227,18 @@ function make_init_regrid_and_values(num_cells,
 
     init_regrid_and_values:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         initializeCells([num_cells][level], [cell_partition_for_level[level]][color])
       end
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         calculateGradient(num_cells[level], [dx][level], [bloated_partition_for_level[level]][color],
                           [face_partition_for_level[level]][color])
       end
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         flagRegrid([meta_partition_for_level[level]][color],
                                    [face_partition_for_level[level]][color])
@@ -269,7 +269,7 @@ function make_init_grid_refinement(num_cells,
 
       init_grid_refinement:insert(rquote
 
-        __demand(__parallel)
+        __demand(__index_launch)
         for color in [cell_partition_for_level[level]].colors do
           updateRefinement(num_cells[level]/CELLS_PER_BLOCK_X,
                            [meta_partition_for_level[level]][color],
@@ -283,7 +283,7 @@ function make_init_grid_refinement(num_cells,
         fill([meta_region_for_level[level]].needsRefinement, false)
         fill([meta_region_for_level[level]].wantsCoarsening, false)
 
-        __demand(__parallel)
+        __demand(__index_launch)
         for color in [cell_partition_for_level[level]].colors do
           smoothGrid([meta_partition_for_level[level]][color])
         end
@@ -310,7 +310,7 @@ function make_time_step(num_cells,
 
   local time_step = terralib.newlist()
 
-  -- interpolateToChildren works from phi_copy not phi or __demand(__parallel) fails
+  -- interpolateToChildren works from phi_copy not phi or __demand(__index_launch) fails
   time_step:insert(rquote
     copy([cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi,
          [cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi_copy)
@@ -320,7 +320,7 @@ function make_time_step(num_cells,
 
     time_step:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         copyToChildren([meta_partition_for_level[level]][color],
                        [cell_partition_for_level[level]][color],
@@ -335,7 +335,7 @@ function make_time_step(num_cells,
 
     time_step:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         interpolateToChildren(num_cells[level+1],
                               [meta_partition_for_level[level]][color],
@@ -352,7 +352,7 @@ function make_time_step(num_cells,
 
     time_step:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         calculateAMRFlux(num_cells[level],
                          dx[level],
@@ -369,7 +369,7 @@ function make_time_step(num_cells,
   
   time_step:insert(rquote
 
-    __demand(__parallel)
+    __demand(__index_launch)
     for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
       calculateFlux(num_cells[MAX_REFINEMENT_LEVEL],
                     dx[MAX_REFINEMENT_LEVEL],
@@ -385,7 +385,7 @@ function make_time_step(num_cells,
 
     time_step:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         applyFlux(dx[level],
                   DT,
@@ -418,7 +418,7 @@ function make_flag_regrid(num_cells,
 
     flag_regrid:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [meta_partition_for_level[level]].colors do
         calculateAMRGradient(num_cells[level],
                          dx[level],
@@ -434,7 +434,7 @@ function make_flag_regrid(num_cells,
   
   flag_regrid:insert(rquote
 
-    __demand(__parallel)
+    __demand(__index_launch)
     for color in [meta_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
       calculateGradient(num_cells[MAX_REFINEMENT_LEVEL],
                         dx[MAX_REFINEMENT_LEVEL],
@@ -449,7 +449,7 @@ function make_flag_regrid(num_cells,
     flag_regrid:insert(rquote
 
       needs_regrid[level] = 0
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [meta_partition_for_level[level]].colors do
         needs_regrid[level] += flagRegrid([meta_partition_for_level[level]][color],
                                           [face_partition_for_level[level]][color])
@@ -492,7 +492,7 @@ function make_do_regrid(num_cells,
 
   local do_regrid = terralib.newlist()
 
-  -- interpolateToChildren works from phi_copy not phi or __demand(__parallel) fails
+  -- interpolateToChildren works from phi_copy not phi or __demand(__index_launch) fails
   do_regrid:insert(rquote
     copy([cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi,
          [cell_region_for_level[MAX_REFINEMENT_LEVEL]].phi_copy)
@@ -502,7 +502,7 @@ function make_do_regrid(num_cells,
 
     do_regrid:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         copyToChildren([meta_partition_for_level[level]][color],
                        [cell_partition_for_level[level]][color],
@@ -517,7 +517,7 @@ function make_do_regrid(num_cells,
 
     do_regrid:insert(rquote
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[level]].colors do
         interpolateToChildren(num_cells[level+1],
                               [meta_partition_for_level[level]][color],
@@ -536,7 +536,7 @@ function make_do_regrid(num_cells,
 
       do_regrid:insert(rquote
 
-        __demand(__parallel)
+        __demand(__index_launch)
         for color in [cell_partition_for_level[level]].colors do
           updateRefinement(num_cells[level]/CELLS_PER_BLOCK_X,
                            [meta_partition_for_level[level]][color],
@@ -549,7 +549,7 @@ function make_do_regrid(num_cells,
 
         fill([meta_region_for_level[level]].needsRefinement, false)
 
-        __demand(__parallel)
+        __demand(__index_launch)
         for color in [cell_partition_for_level[level]].colors do
           smoothGrid([meta_partition_for_level[level]][color])
         end
