@@ -76,7 +76,7 @@ function make_top_level_task()
 
     fill([meta_region_for_level[MAX_REFINEMENT_LEVEL]].isActive, true)
 
-    __demand(__parallel)
+    __demand(__index_launch)
     for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
       initializeCells([num_cells][MAX_REFINEMENT_LEVEL],
                       [cell_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
@@ -85,7 +85,7 @@ function make_top_level_task()
     var time : double = 0.0
     while time < T_FINAL - DT do
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
         calculateFlux(num_cells[MAX_REFINEMENT_LEVEL], [dx][MAX_REFINEMENT_LEVEL], DT,
                       [meta_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
@@ -93,7 +93,7 @@ function make_top_level_task()
                       [face_partition_for_level[MAX_REFINEMENT_LEVEL]][color])
       end
 
-      __demand(__parallel)
+      __demand(__index_launch)
       for color in [cell_partition_for_level[MAX_REFINEMENT_LEVEL]].colors do
           applyFlux([dx][MAX_REFINEMENT_LEVEL], DT,
                     [meta_partition_for_level[MAX_REFINEMENT_LEVEL]][color],
