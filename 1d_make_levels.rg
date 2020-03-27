@@ -63,13 +63,21 @@ function make_level_regions(n, num_partitions)
   local cell_region = regentlib.newsymbol("level_" .. n .. "_cell_region")
   local num_cells = CELLS_PER_BLOCK_X * LEVEL_1_BLOCKS_X * ratio_to_level1
   local cell_declaration =
-    rquote var [cell_region] = region(ispace(int1d, num_cells), CellValues) end
+    rquote
+      var [cell_region] = region(ispace(int1d, num_cells), CellValues)
+      var init : CellValues
+      fill([cell_region], init)
+    end
 
   -- meta data is refinement status
   local meta_region = regentlib.newsymbol("level_" .. n .. "_meta_region")
   local num_metas = LEVEL_1_BLOCKS_X * ratio_to_level1
   local meta_declaration =
-    rquote var [meta_region] = region(ispace(int1d, num_metas), RefinementBits) end
+    rquote
+      var [meta_region] = region(ispace(int1d, num_metas), RefinementBits)
+      var init : RefinementBits
+      fill([meta_region], init)
+    end
 
   local meta_partition = regentlib.newsymbol("level_" .. n .. "_meta_partition")
   local mpart_declaration =
@@ -100,7 +108,11 @@ function make_level_regions(n, num_partitions)
   local face_region = regentlib.newsymbol("level_" .. n .. "_face_region")
   local num_faces = num_cells + num_partitions
   local face_declaration =
-    rquote var [face_region] = region(ispace(int1d, num_faces), FaceValues) end
+    rquote
+      var [face_region] = region(ispace(int1d, num_faces), FaceValues)
+      var init : FaceValues
+      fill([face_region], init)
+    end
 
   local face_partition = regentlib.newsymbol("level_" .. n .. "_face_partition")
   local fpart_declaration = rquote
