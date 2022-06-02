@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -50,10 +50,10 @@ def test_single_resolution(refinement_level, filename, threshold, descriptor):
     subprocess.check_call([regent,"1d_fix.rg"], stdout=dev_null)
     L2, x, numeric, analytic = measure_error(filename)
     if (L2 > threshold) or np.isnan(L2) :
-      print descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold
+      print(descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold)
       ERROR = 1
     else:
-      print descriptor+": \033[0;32mPASS\033[0m ",L2," < ",threshold
+      print(descriptor+": \033[0;32mPASS\033[0m ",L2," < ",threshold)
   return ERROR
 
 if __name__== "__main__":

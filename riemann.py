@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -65,9 +65,9 @@ def three_shock(P, P_r, rho_r, u_r):
 def phi(P_star, P, rho):
     val = np.nan
     if (P_star>=P):
-	val = phi_shock(np.array([P_star]), P, rho)
+        val = phi_shock(np.array([P_star]), P, rho)
     else:
-	val = phi_rarefact(np.array([P_star]), P, rho)
+        val = phi_rarefact(np.array([P_star]), P, rho)
     return val[0]
 
 def one(P, P_l, rho_l, u_l):
@@ -89,25 +89,25 @@ def deriv_phi_shock(P_star, P, rho):
 def deriv_phi(P_star, P, rho):
     val = np.nan
     if (P_star>=P):
-	val = deriv_phi_shock(P_star, P, rho)
+        val = deriv_phi_shock(P_star, P, rho)
     else:
-	val = deriv_phi_rarefact(P_star, P, rho)
+        val = deriv_phi_rarefact(P_star, P, rho)
     return val
 
 def rho_star(P_star, P, rho):
     val = np.nan
     if (P_star>=P):
-	val = (1.0+BETA*P_star/P)*rho/(P_star/P + BETA)
+        val = (1.0+BETA*P_star/P)*rho/(P_star/P + BETA)
     else:
-	val = (P_star / P)**(1.0/GAMMA) * rho
+        val = (P_star / P)**(1.0/GAMMA) * rho
     return val
 
 def verify_Rankine_Hugoniot(P_u, rho_u, v_u, P_d, rho_d, v_d, S):
     E_u = get_energy(P_u, rho_u, v_u)
     E_d = get_energy(P_d, rho_d, v_d)
-    #print v_u * (E_u + P_u) - v_d*(E_d+P_d),"vs",S*(E_u - E_d)
-    #print rho_u*v_u**2+P_u - rho_d*v_d**2 - P_d,"vs",S*(rho_u*v_u-rho_d*v_d)
-    #print rho_u*v_u - rho_d*v_d,"vs",S*(rho_u-rho_d)
+    #print(v_u * (E_u + P_u) - v_d*(E_d+P_d),"vs",S*(E_u - E_d))
+    #print(rho_u*v_u**2+P_u - rho_d*v_d**2 - P_d,"vs",S*(rho_u*v_u-rho_d*v_d))
+    #print(rho_u*v_u - rho_d*v_d,"vs",S*(rho_u-rho_d))
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     #plt.xlim([0,2])
     #f_func = np.zeros(len(P))
     #for i in range(len(P)):
-	#f_func[i] = one(P[i], P_l, rho_l, u_l) - three(P[i], P_r, rho_r, u_r)
+        #f_func[i] = one(P[i], P_l, rho_l, u_l) - three(P[i], P_r, rho_r, u_r)
     #plt.plot(P,f_func)
 
     # Newton solve
@@ -143,33 +143,33 @@ if __name__ == "__main__":
 
     count = 0
     while(np.abs(f) > EPS):
-	#print 'du_l',deriv_phi(P_star, P_l, rho_l)
-	#print 'du_r', -1.0 * deriv_phi(P_star, P_r, rho_r)
-	# u_l_star = u_l + phi, u_r_star = u_r - phi
-	df = deriv_phi(P_star, P_l, rho_l) + deriv_phi(P_star, P_r, rho_r)
-	print 'iter',count,'f',f,'df',df
+        #print('du_l',deriv_phi(P_star, P_l, rho_l))
+        #print('du_r', -1.0 * deriv_phi(P_star, P_r, rho_r))
+        # u_l_star = u_l + phi, u_r_star = u_r - phi
+        df = deriv_phi(P_star, P_l, rho_l) + deriv_phi(P_star, P_r, rho_r)
+        print('iter',count,'f',f,'df',df)
 
-	# Newton update
-	P_star = P_star - f/df
-	count += 1
+        # Newton update
+        P_star = P_star - f/df
+        count += 1
 
-	u_l_star = one(P_star, P_l, rho_l, u_l)
-	u_r_star = three(P_star, P_r, rho_r, u_r)
-	plt.plot([P_star],[u_l_star], 'o')
-	plt.plot([P_star],[u_r_star], '.')
-	f = u_l_star - u_r_star
+        u_l_star = one(P_star, P_l, rho_l, u_l)
+        u_r_star = three(P_star, P_r, rho_r, u_r)
+        plt.plot([P_star],[u_l_star], 'o')
+        plt.plot([P_star],[u_r_star], '.')
+        f = u_l_star - u_r_star
 
-    print 'P_star',P_star,'u_l_star',u_l_star,'u_r_star',u_r_star
+    print('P_star',P_star,'u_l_star',u_l_star,'u_r_star',u_r_star)
     u_star = 0.5 * (u_l_star + u_r_star)
 
     S_3 = (P_star - P_r - rho_r * u_r**2)/(rho_r * (u_star - u_r))
-    print "S_3", S_3, "u+c",u_r + speed_of_sound(P_r, rho_r)
+    print("S_3", S_3, "u+c",u_r + speed_of_sound(P_r, rho_r))
 
 
     rho_l_star = rho_star(P_star, P_l, rho_l)
-    print 'rho_l_star',rho_l_star
+    print('rho_l_star',rho_l_star)
     rho_r_star = rho_star(P_star, P_r, rho_r)
-    print 'rho_r_star',rho_r_star,'or', S_3 * rho_r / (S_3 - u_star)
+    print('rho_r_star',rho_r_star,'or', S_3 * rho_r / (S_3 - u_star))
 
     print
     verify_Rankine_Hugoniot(P_r, rho_r, u_r, P_star, rho_r_star, u_star, S_3)
@@ -179,40 +179,40 @@ if __name__ == "__main__":
     delta_t = t_final
 
     S_2 = u_star
-    print "S_2", S_2
+    print("S_2", S_2)
     c_l = speed_of_sound(P_l, rho_l)
     S_1_head = u_l - c_l
-    print "S_1_head",S_1_head
+    print("S_1_head",S_1_head)
     S_1_tail = u_star - speed_of_sound(P_star, rho_l_star)
-    print "S_1_tail",S_1_tail
+    print("S_1_tail",S_1_tail)
 
     density = np.zeros(len(x))
     velocity = np.zeros(len(x))
     pressure = np.zeros(len(x))
     sie = np.zeros(len(x))
     for i in range(len(x)):
-	if ((x[i]-x_jump) <= (delta_t*S_1_head)):
-	    density[i] = rho_l
-	    velocity[i] = u_l
-	    pressure[i] = P_l
-	elif ((x[i]-x_jump) > (delta_t*S_1_head)) & ((x[i]-x_jump)<=(delta_t*S_1_tail)):
-	    Xsi = (x[i]-x_jump) / delta_t
-	    velocity[i] = ((GAMMA-1.0)*u_l+2.0*(c_l+Xsi)) / (GAMMA+1.0)
-	    density[i] = (rho_l**GAMMA*(velocity[i]-Xsi)**2/(GAMMA*rho_l))**(1.0/(GAMMA-1.0))
-	    pressure[i] = P_l/rho_l**GAMMA * density[i]**GAMMA
-	elif ((x[i]-x_jump) > (delta_t*S_1_tail)) & ((x[i]-x_jump)<=(delta_t*S_2)):
-	    density[i] = rho_l_star
-	    velocity[i] = u_star
-	    pressure[i] = P_star
-	elif ((x[i]-x_jump) > (delta_t*S_2)) & ((x[i]-x_jump)<=(delta_t*S_3)):
-	    density[i] = rho_r_star
-	    velocity[i] = u_star
-	    pressure[i] = P_star
-	elif (x[i]-x_jump) > (delta_t*S_3):
-	    density[i] = rho_r
-	    velocity[i] = u_r
-	    pressure[i] = P_r
-	sie[i] = specific_internal_energy(pressure[i], density[i])
+        if ((x[i]-x_jump) <= (delta_t*S_1_head)):
+            density[i] = rho_l
+            velocity[i] = u_l
+            pressure[i] = P_l
+        elif ((x[i]-x_jump) > (delta_t*S_1_head)) & ((x[i]-x_jump)<=(delta_t*S_1_tail)):
+            Xsi = (x[i]-x_jump) / delta_t
+            velocity[i] = ((GAMMA-1.0)*u_l+2.0*(c_l+Xsi)) / (GAMMA+1.0)
+            density[i] = (rho_l**GAMMA*(velocity[i]-Xsi)**2/(GAMMA*rho_l))**(1.0/(GAMMA-1.0))
+            pressure[i] = P_l/rho_l**GAMMA * density[i]**GAMMA
+        elif ((x[i]-x_jump) > (delta_t*S_1_tail)) & ((x[i]-x_jump)<=(delta_t*S_2)):
+            density[i] = rho_l_star
+            velocity[i] = u_star
+            pressure[i] = P_star
+        elif ((x[i]-x_jump) > (delta_t*S_2)) & ((x[i]-x_jump)<=(delta_t*S_3)):
+            density[i] = rho_r_star
+            velocity[i] = u_star
+            pressure[i] = P_star
+        elif (x[i]-x_jump) > (delta_t*S_3):
+            density[i] = rho_r
+            velocity[i] = u_r
+            pressure[i] = P_r
+        sie[i] = specific_internal_energy(pressure[i], density[i])
 
     plot_density(density)
     plot_velocity(velocity)
