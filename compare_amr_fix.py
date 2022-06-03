@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -33,7 +33,7 @@ L2, x, fixed, analytic = measure_error("linear.80.txt")
 
 filenames = ["0319_linear_amr.20.0.txt","0319_linear_amr.40.0.txt", "0319_linear_amr.80.6.txt","0319_linear_amr.40.3.txt","0319_linear_amr.80.12.txt", "0319_linear_amr.80.18.txt","0319_linear_amr.80.24.txt"]
 x_amr, amr = read_amr(filenames)
-print x_amr
+print(x_amr)
 x_amr = np.array(x_amr)
 
 amr_analytic = np.zeros(len(amr))
@@ -41,8 +41,8 @@ amr_analytic[np.where(np.array(x_amr)<0.75)] = 1.0
 
 amr_L2 = trapezoid(x_amr, (amr - amr_analytic)**2)
  
-print "fixed", L2
-print "amr", amr_L2
+print("fixed", L2)
+print("amr", amr_L2)
 
 plt.figure()
 plt.ylabel("phi")

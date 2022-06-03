@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -68,7 +68,7 @@ if __name__== "__main__":
     texts = file.split("txt")
     if len(texts) > 1:
       entries = texts[0].split('_')
-      print entries
+      print(entries)
       if entries[0] != old_count:
         if len(amr_files) > 0:
           x, phi = read_amr(amr_files)

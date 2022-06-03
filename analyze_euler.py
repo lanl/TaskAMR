@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -143,15 +143,15 @@ if __name__== "__main__":
   plt.plot(x,density,label='anal')
 
   for filename in args.text_files:
-    print filename
+    print(filename)
     resolution = filename.split('.')
     NX.append(float(resolution[1]))
     L2, x, num_density, density = measure_error(filename)
     plt.plot(x,num_density,'--',label='NX='+str(NX[-1]))
     Error.append(L2)
 
-  print NX
-  print Error
+  print(NX)
+  print(Error)
   plt.legend(loc='best')
 
   plt.figure()

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -58,10 +58,10 @@ def test_amr(refinement_level, filenames, threshold, descriptor):
     L2 = trapezoid(x, (numeric - analytic)**2)
  
     if (L2 > threshold) or np.isnan(L2) :
-      print descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold
+      print(descriptor+": \033[0;31mFAIL\033[0m ",L2," > ",threshold)
       ERROR = 1
     else:
-      print descriptor+": \033[0;32mPASS\033[0m",L2," < ",threshold
+      print(descriptor+": \033[0;32mPASS\033[0m",L2," < ",threshold)
   return ERROR
 
 if __name__== "__main__":
@@ -73,14 +73,14 @@ if __name__== "__main__":
   with open("/dev/null","w") as dev_null:
     ERROR = subprocess.call([regent,"1d_amr.rg"], stdout=dev_null)
   if ERROR == 0:
-    print "1d_amr CELLS_PER_BLOCK_X: \033[0;31mFAIL\033[0m"
+    print("1d_amr CELLS_PER_BLOCK_X: \033[0;31mFAIL\033[0m")
     sys.exit(1)
 
   set_cells_per_block_x(3)
   with open("/dev/null","w") as dev_null:
     ERROR = subprocess.call([regent,"1d_amr.rg"], stdout=dev_null)
   if ERROR == 0:
-    print "1d_amr CELLS_PER_BLOCK_X: \033[0;31mFAIL\033[0m"
+    print("1d_amr CELLS_PER_BLOCK_X: \033[0;31mFAIL\033[0m")
     sys.exit(1)
 
   sys.exit(test_amr(4, ["linear_amr.20.0.txt", "linear_amr.40.0.txt","linear_amr.40.3.txt",

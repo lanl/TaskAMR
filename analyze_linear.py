@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2018, Triad National Security, LLC
 # All rights reserved.
@@ -64,7 +64,7 @@ if __name__== "__main__":
   plt.plot(x,analytic,label='analytic')
 
   for filename in args.text_files:
-    print filename
+    print(filename)
     resolution = filename.split('.')
     NX.append(float(resolution[1]))
     L2, x, numeric, analytic = measure_error(filename)
